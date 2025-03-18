@@ -1,4 +1,5 @@
 local spawner = {}
+local Boss = require("modules.boss")  -- require the boss module
 
 function spawner.spawnGround(world)
     ground = world:newRectangleCollider(0, 550, 800, 50)
@@ -16,10 +17,16 @@ function spawner.spawnPlayer(world, playerX, playerY)
 end
 
 function spawner.spawnBoss(world)
-    boss = world:newRectangleCollider(500, 300, 100, 100)
-    boss:setType('dynamic')
-    boss:setCollisionClass('Boss')
-    boss:setRestitution(0)
+    -- Create a boss instance using our boss module.
+    boss = Boss:new(world, 500, 300, {
+        Difficulty = 2,
+        AttackSpeed = 1,
+        AttackDamage = 15,
+        AttackInterval = 2,
+        Durability = 300,
+        Speed = 100,
+        JumpForce = 500
+    })
 end
 
 return spawner

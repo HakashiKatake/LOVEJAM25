@@ -7,7 +7,7 @@ local utility = require 'modules.utility'
 
 local game = {}
 
--- Global game state variables
+-- Global game state variables (cards, money, etc.)
 local world
 local possibleCards = {}
 local chosenCards = {}
@@ -49,7 +49,7 @@ local playButton = {
     visible = true  
 }
 
--- These will be set by our spawner module
+-- Player, boss, and related variables.
 player = nil
 ground = nil
 isSpawned = false
@@ -64,13 +64,7 @@ attackDamage = 10
 attackSpeed = 1
 attackBonus = 0
 
-boss = nil
-bossHealth = 300
-bossMaxHealth = 300
-bossResistance = 2
-bossShield = 50
-
-playerTrigger = nil
+boss = nil  -- will be assigned a boss instance from our boss module
 
 worldGravity = 800
 
@@ -95,7 +89,6 @@ function game.load()
     effect.filmgrain.size = 3
     effect.scanlines.opacity = 0.2
 
-    -- Load card data from the card module
     possibleCards = card.getPossibleCards()
     for i, cardData in ipairs(possibleCards) do
         if not cardData.Sprite then
@@ -111,7 +104,6 @@ function game.load()
         })
     end
 
-    -- Setup initial card selection
     card.drawCards(amountCards, possibleCards, chosenCards, cardAnimations, cardY)
 end
 
@@ -148,7 +140,7 @@ function game.update(dt)
             maxBoughtCards = 5
         end
 
-        -- Handle Lucky Draw card effect
+        -- Additional card effects (like Lucky Draw, gravity changes, etc.)
         if utility.tableContains(boughtCards, "Lucky Draw") then
             if #boughtCards < maxBoughtCards then  
                 if #possibleCards > 0 then  
@@ -195,7 +187,7 @@ function game.update(dt)
         end
     end
 
-    -- Use backward iteration for safe removal
+    -- Update card animations with backward iteration for safe removal.
     for i = #cardAnimations, 1, -1 do
         local anim = cardAnimations[i]
         if anim.elapsed < anim.delay then
@@ -225,7 +217,7 @@ function game.update(dt)
         end
     end
 
-    -- Update hovered card state
+    -- Update hovered card state.
     local mx, my = love.mouse.getPosition()
     hoveredCardIndex = nil
     local startX = (800 - (amountCards * 120)) / 2  
@@ -244,7 +236,7 @@ function game.update(dt)
         timer = 0
     end
 
-    -- Update play button state
+    -- Update play button state.
     local mx, my = love.mouse.getPosition()
     playButton.hovered = mx > playButton.x and mx < playButton.x + playButton.width and
                          my > playButton.y and my < playButton.y + playButton.height
@@ -262,6 +254,11 @@ function game.update(dt)
         end
     end
     playButton.scale = playButton.scale + (playButton.targetScale - playButton.scale) * 10 * dt
+
+    -- Update the boss if it exists.
+    if boss and player then
+        boss:update(dt, player)
+    end
 end
 
 function game.draw()
@@ -282,17 +279,7 @@ function game.draw()
         end
 
         if boss then
-            local barWidth = 300
-            local barHeight = 20
-            local barX = (800 - barWidth) / 2
-            local barY = 20
-
-            love.graphics.setColor(0, 0, 0)
-            love.graphics.rectangle("fill", barX, barY, barWidth, barHeight)
-            love.graphics.setColor(1, 0, 0)
-            love.graphics.rectangle("fill", barX, barY, (bossHealth / bossMaxHealth) * barWidth, barHeight)
-            love.graphics.setColor(1, 1, 1)
-            love.graphics.printf("BOSS", barX, barY - 4, barWidth, "center")
+            boss:draw()
         end
 
         if #boughtCards > 0 then
@@ -317,8 +304,8 @@ function game.mousepressed(x, y, button)
     if button == 1 then  
         if isSpawned and boss and playerTrigger then
             if playerTrigger:enter('Boss') then
-                bossHealth = bossHealth - (attackDamage + attackBonus)
-                print("Boss hit! Health: " .. bossHealth)
+                boss.Durability = boss.Durability - (attackDamage + attackBonus)
+                print("Boss hit! Health: " .. boss.Durability)
             end
         end
 
@@ -370,7 +357,7 @@ function game.keypressed(key)
     elseif key == 'q' then
         boughtCards = {}
     elseif key == '-' then
-        bossHealth = bossHealth - 10
+        boss.Durability = boss.Durability - 10
     elseif key == '=' then
         playerHealth = playerHealth - 10
     elseif key == 'space' and canJump then
@@ -384,7 +371,7 @@ function game.beginFight()
     targetBgColor = { love.math.random(), love.math.random(), love.math.random() }
     spawner.spawnPlayer(world, playerX, playerY)
     spawner.spawnGround(world)
-    spawner.spawnBoss(world)
+    spawner.spawnBoss(world)  -- spawn the boss via the spawner module
 end
 
 return game
