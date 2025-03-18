@@ -13,7 +13,7 @@ function card.getPossibleCards()
         {Name = "Thorns", Description = "Reflects a portion of damage taken", Price = 8, Sprite = love.graphics.newImage("Source/Sprites/Cards/thorns.png")},
         {Name = "Vampiric Strike", Description = "Steal health equal to 25% of damage dealt", Price = 8, Sprite = love.graphics.newImage("Source/Sprites/Cards/vampiric_strike.png")},
         {Name = "Phase Shift", Description = "Temporary invincibility (3-5 seconds)", Price = 9, Sprite = love.graphics.newImage("Source/Sprites/Cards/phase_shift.png")},
-        {Name = "Second Wind", Description = "Revive with 50% health after dying", Price = 16, Sprite = love.graphics.newImage("Source/Sprites/Cards/second_wind.png")},
+        {Name = "Second Wind", Description = "Revive with 50% health after dying, lose all the cards you have", Price = 16, Sprite = love.graphics.newImage("Source/Sprites/Cards/second_wind.png")},
         {Name = "Lucky Draw", Description = "Randomly gain one positive effect", Price = 5, Sprite = love.graphics.newImage("Source/Sprites/Cards/lucky_draw.png")},
         {Name = "Haste", Description = "Gain the ability of Dashing", Price = 9, Sprite = love.graphics.newImage("Source/Sprites/Cards/haste.png")},
         {Name = "Time Warp", Description = "Get back 20 Health if Boss Health > 50 and Player Health < 50", Price = 12, Sprite = love.graphics.newImage("Source/Sprites/Cards/time_warp.png")},

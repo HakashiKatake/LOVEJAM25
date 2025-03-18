@@ -39,7 +39,7 @@ local playButton = {
     y = 200,  
     width = 100,  
     height = 50,  
-    text = "Play",  
+    text = "Start",  
     hovered = false,  
     clicked = false,  
     scale = 1,  
@@ -64,12 +64,15 @@ attackDamage = 10
 attackSpeed = 1
 attackBonus = 0
 
+Poison = false
+
 boss = nil  -- will be assigned a boss instance from our boss module
 
 worldGravity = 800
 
 local maxBoughtCards = 5
 
+math.randomseed(os.time())
 function game.load()
     love.window.setTitle("LÖVEJAM25")
     love.window.setMode(800, 600)
@@ -105,6 +108,12 @@ function game.load()
     end
 
     card.drawCards(amountCards, possibleCards, chosenCards, cardAnimations, cardY)
+
+    if math.random(1, 10) >= 7 then
+        Poison = false
+    else
+        Poison = true
+    end
 end
 
 function game.update(dt)
@@ -113,13 +122,33 @@ function game.update(dt)
     if isSpawned then
         playerTrigger:setPosition(player:getX(), player:getY())
 
+        if playerHealth <= 1 and utility.tableContains(boughtCards, "Second Wind") then
+            playerHealth = 50
+            boughtCards = {}
+        end
+
         if love.keyboard.isDown('a') then
             player:setX(playerX - playerSpeed)
             playerX = playerX - playerSpeed
+            if Poison then
+                playerHealth = playerHealth - math.random(0.1, 1)
+            end
         elseif love.keyboard.isDown('d') then
             player:setX(playerX + playerSpeed)
             playerX = playerX + playerSpeed
-            player:applyLinearImpulse(0, -100)
+            if Poison then
+                playerHealth = playerHealth - math.random(0.1, 1)
+            end
+        end
+
+        if Poison then
+            if utility.tableContains(boughtCards, "Antidote") then
+                Poison = false
+            end
+
+            if utility.tableContains(boughtCards, "Resilience") and math.random(1, 10) > 5 then
+                Poison = false
+            end
         end
 
         if utility.tableContains(boughtCards, "Quickthinking") then
@@ -265,9 +294,18 @@ function game.draw()
     background.draw(currentBgColor, gradientTime, stars)
     world:setQueryDebugDrawing(true)
 
+    --love.graphics.print(tostring(Poison), 0, 200)
+
     effect(function()
         love.graphics.setColor(1, 1, 1)
-        love.graphics.printf("Money: $" .. Money, 0, 15, 800, "center")
+        if Poison then
+            love.graphics.print("Smells weird...", 0, 0)
+        end
+        if isSpawned then
+            -- do nothing
+        else
+            love.graphics.printf("Money: $" .. Money, 0, 15, 800, "center")
+        end
         love.graphics.printf("Cards: " .. #boughtCards .. "/" .. maxBoughtCards, 0, 50, 800, "center")
 
         if player then
@@ -364,6 +402,12 @@ function game.keypressed(key)
         player:applyLinearImpulse(0, -2300)
     elseif key == '1' then
         Money = Money + 10
+    elseif key == '2' then
+        if Poison then
+            Poison = false
+        else
+            Poison = true
+        end
     end
 end
 

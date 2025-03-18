@@ -17,7 +17,8 @@ function Boss:new(world, x, y, settings)
     instance.AttackSpeed    = settings.AttackSpeed or 1        -- can affect animation timing
     instance.AttackDamage   = settings.AttackDamage or 10      -- damage per attack
     instance.AttackInterval = settings.AttackInterval or 2     -- seconds between attacks
-    instance.Durability     = settings.Durability or 300       -- boss health
+    instance.MaxDurability  = settings.Durability or 300       -- max boss health
+    instance.Durability     = instance.MaxDurability           -- current health
     instance.Speed          = settings.Speed or 100            -- movement speed
     instance.JumpForce      = settings.JumpForce or 500        -- jump impulse force
 
@@ -39,11 +40,11 @@ function Boss:update(dt, player)
     local distance = math.sqrt(dx * dx + dy * dy)
 
     -- If the player is close and the timer allows, attack.
-    if distance < 300 and self.attackTimer >= self.AttackInterval then
+    if distance < 200 and self.attackTimer >= self.AttackInterval then
         self:attack(player)
         self.attackTimer = 0
     -- Otherwise, move toward the player.
-    elseif distance >= 300 then
+    elseif distance >= 200 then
         self:moveTowards(player, dt)
     end
 end
@@ -80,22 +81,39 @@ function Boss:jump()
     self.collider:applyLinearImpulse(0, -self.JumpForce)
 end
 
--- Draw the boss and a simple health bar.
+-- Draw the boss and a boss health bar at the top center of the screen.
 function Boss:draw()
+    -- Draw the boss
     love.graphics.setColor(1, 0, 0)
     local x, y = self.collider:getPosition()
     love.graphics.rectangle("fill", x - 50, y - 50, 100, 100)
     love.graphics.setColor(1, 1, 1)
 
-    -- Simple health bar (assuming max durability of 300)
-    local healthBarWidth = 100
-    local healthBarHeight = 10
-    local healthPercentage = self.Durability / 300
+    -- Health bar variables
+    local screenWidth = love.graphics.getWidth()
+    local healthBarWidth = 300
+    local healthBarHeight = 25
+    local healthPercentage = math.max(self.Durability / self.MaxDurability, 0)
+    
+    -- Dynamic color transition (Green -> Yellow -> Red)
+    local r = math.min(2 * (1 - healthPercentage), 1)
+    local g = math.min(2 * healthPercentage, 1)
+
+    -- Health bar position (Top center of the screen)
+    local barX = (screenWidth / 2) - (healthBarWidth / 2)
+    local barY = 17  -- Position from top of the screen
+
+    -- Health bar background (black border)
     love.graphics.setColor(0, 0, 0)
-    love.graphics.rectangle("fill", x - 50, y - 60, healthBarWidth, healthBarHeight)
-    love.graphics.setColor(0, 1, 0)
-    love.graphics.rectangle("fill", x - 50, y - 60, healthBarWidth * healthPercentage, healthBarHeight)
+    love.graphics.rectangle("fill", barX - 2, barY - 2, healthBarWidth + 4, healthBarHeight + 4)
+
+    -- Health bar foreground (dynamic color)
+    love.graphics.setColor(r, g, 0)
+    love.graphics.rectangle("fill", barX, barY, healthBarWidth * healthPercentage, healthBarHeight)
+
+    -- Boss name above health bar
     love.graphics.setColor(1, 1, 1)
+    love.graphics.printf("BOSS", barX, barY, healthBarWidth, "center")
 end
 
 return Boss
