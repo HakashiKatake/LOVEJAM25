@@ -36,7 +36,7 @@ local gameFont
 
 function credits.load()
     -- Load the custom font
-    gameFont = love.graphics.newFont("source/fonts/Jersey10.ttf", 25)
+    gameFont = love.graphics.newFont("source/fonts/Jersey10.ttf", 45)
     -- Reset yOffset to start from the bottom
     yOffset = love.graphics.getHeight()
 end
