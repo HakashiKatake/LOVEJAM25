@@ -73,6 +73,45 @@ worldGravity = 800
 local maxBoughtCards = 5
 
 math.randomseed(os.time())
+
+function game.resetGameState()
+    -- Reset all game state variables to their initial values
+    possibleCards = card.getPossibleCards()
+    chosenCards = {}
+    boughtCards = {}
+    amountCards = 3
+    hoveredCardIndex = nil
+    timer = 0
+    Money = 10
+    gradientTime = 0
+    currentBgColor = {0.1, 0.1, 0.2}
+    targetBgColor = {0.1, 0.1, 0.2}
+    cardAnimations = {}
+    removedCardIndex = nil
+    removalTimer = 0
+    playButton.visible = true
+    playButton.clicked = false
+    playButton.scale = 1
+    playButton.targetScale = 1
+    isSpawned = false
+    player = nil
+    ground = nil
+    boss = nil
+    playerHealth = 100
+    Poison = false
+    worldGravity = 800
+    maxBoughtCards = 5
+
+    -- Reinitialize the world
+    world = wf.newWorld(0, worldGravity, true)
+    world:addCollisionClass("Ground")
+    world:addCollisionClass("PlayerTrigger")
+    world:addCollisionClass("Boss")
+
+    -- Reinitialize cards
+    card.drawCards(amountCards, possibleCards, chosenCards, cardAnimations, cardY)
+end
+
 function game.load()
     love.window.setTitle("LÖVEJAM25")
     love.window.setMode(800, 600)
@@ -125,6 +164,10 @@ function game.update(dt)
         if playerHealth <= 1 and utility.tableContains(boughtCards, "Second Wind") then
             playerHealth = 50
             boughtCards = {}
+        end
+
+        if playerHealth <= 1 and not utility.tableContains(boughtCards, "Second Wind") then
+            love.window.close()
         end
 
         if love.keyboard.isDown('a') then
@@ -200,10 +243,6 @@ function game.update(dt)
         end
 
         world:setGravity(0, worldGravity)
-    end
-
-    if love.keyboard.isDown('escape') then
-        love.event.quit()
     end
 
     gradientTime = gradientTime + dt * 0.1
@@ -294,12 +333,10 @@ function game.draw()
     background.draw(currentBgColor, gradientTime, stars)
     world:setQueryDebugDrawing(true)
 
-    --love.graphics.print(tostring(Poison), 0, 200)
-
     effect(function()
         love.graphics.setColor(1, 1, 1)
         if Poison then
-            love.graphics.print("Smells weird...", 0, 0)
+            love.graphics.printf("Smells weird...", 0, 170, 800, "center")
         end
         if isSpawned then
             -- do nothing
@@ -392,6 +429,8 @@ end
 function game.keypressed(key)
     if key == 'r' then
         card.drawCards(amountCards, possibleCards, chosenCards, cardAnimations, cardY)
+    elseif key == 'escape' then
+        love.window.close()
     elseif key == 'q' then
         boughtCards = {}
     elseif key == '-' then
@@ -408,6 +447,8 @@ function game.keypressed(key)
         else
             Poison = true
         end
+    elseif key == '3' then
+        game.fightWin()
     end
 end
 
@@ -416,6 +457,14 @@ function game.beginFight()
     spawner.spawnPlayer(world, playerX, playerY)
     spawner.spawnGround(world)
     spawner.spawnBoss(world)  -- spawn the boss via the spawner module
+end
+
+function game.fightWin()
+    local lastMoney = Money
+    local lastCards = boughtCards
+    game.resetGameState()
+    Money = lastMoney + math.random(1, 7)
+    boughtCards = lastCards
 end
 
 return game
