@@ -25,7 +25,8 @@ function spawner.spawnBoss(world)
         AttackInterval = 2,
         Durability = 300,
         Speed = 100,
-        JumpForce = 500,
+        JumpForce = 200,
+        bossPoison = false,
         Name = "BOSS"
     })
 end

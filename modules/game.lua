@@ -65,6 +65,7 @@ attackSpeed = 1
 attackBonus = 0
 
 Poison = false
+TwoFaced = false
 
 boss = nil  -- will be assigned a boss instance from our boss module
 
@@ -99,6 +100,7 @@ function game.resetGameState()
     boss = nil
     playerHealth = 100
     Poison = false
+    TwoFaced = false
     worldGravity = 800
     maxBoughtCards = 5
 
@@ -148,11 +150,9 @@ function game.load()
 
     card.drawCards(amountCards, possibleCards, chosenCards, cardAnimations, cardY)
 
-    if math.random(1, 10) >= 7 then
-        Poison = false
-    else
-        Poison = true
-    end
+    -- Initialize Poison and TwoFaced states
+    Poison = false
+    TwoFaced = false
 end
 
 function game.update(dt)
@@ -160,6 +160,19 @@ function game.update(dt)
 
     if isSpawned then
         playerTrigger:setPosition(player:getX(), player:getY())
+
+        if boss.Durability <= 1 and TwoFaced then
+            boss.Durability = 50
+            TwoFaced = false
+        end
+
+        if boss.Durability <= 1 and not TwoFaced then
+            game.fightWin()
+        end
+
+        if playerHealth <= 1 and not utility.tableContains(boughtCards, "Second Wind") then
+            love.window.close()
+        end
 
         if playerHealth <= 1 and utility.tableContains(boughtCards, "Second Wind") then
             playerHealth = 50
@@ -184,20 +197,34 @@ function game.update(dt)
             end
         end
 
-        if Poison then
-            if utility.tableContains(boughtCards, "Antidote") then
-                Poison = false
-            end
-
-            if utility.tableContains(boughtCards, "Resilience") and math.random(1, 10) > 5 then
-                Poison = false
-            end
+        -- Update Poison state based on cards
+        if utility.tableContains(boughtCards, "Antidote") then
+            Poison = false
+        elseif utility.tableContains(boughtCards, "Resilience") and math.random(1, 10) > 5 then
+            Poison = false
         end
 
         if utility.tableContains(boughtCards, "Quickthinking") then
             playerSpeed = 6
         else
             playerSpeed = 3
+        end
+
+        if utility.tableContains(boughtCards, "Mushroom") then
+            if math.random(1, 10) > 6 then
+                Poison = true
+            else
+                playerHealth = playerHealth + 50
+            end
+
+            utility.tableRemove(boughtCards, "Mushroom")
+        end
+
+        if utility.tableContains(boughtCards, "UNO Reverse") and Poison then
+            boss.bossPoison = true
+            Poison = false
+        else
+            boss.bossPoison = false
         end
 
         if utility.tableContains(boughtCards, "BUY BUY BUY") then
@@ -335,8 +362,10 @@ function game.draw()
 
     effect(function()
         love.graphics.setColor(1, 1, 1)
-        if Poison then
+        if Poison and not isSpawned then
             love.graphics.printf("Smells weird...", 0, 170, 800, "center")
+        elseif TwoFaced and not isSpawned then
+            love.graphics.printf("I hear shrieking...", 0, 170, 800, "center")
         end
         if isSpawned then
             -- do nothing
@@ -434,7 +463,7 @@ function game.keypressed(key)
     elseif key == 'q' then
         boughtCards = {}
     elseif key == '-' then
-        boss.Durability = boss.Durability - 10
+        boss.Durability = boss.Durability - 30
     elseif key == '=' then
         playerHealth = playerHealth - 10
     elseif key == 'space' and canJump then
@@ -442,11 +471,7 @@ function game.keypressed(key)
     elseif key == '1' then
         Money = Money + 10
     elseif key == '2' then
-        if Poison then
-            Poison = false
-        else
-            Poison = true
-        end
+        Poison = not Poison
     elseif key == '3' then
         game.fightWin()
     end
@@ -457,6 +482,8 @@ function game.beginFight()
     spawner.spawnPlayer(world, playerX, playerY)
     spawner.spawnGround(world)
     spawner.spawnBoss(world)  -- spawn the boss via the spawner module
+
+    boss.bossPoison = false
 end
 
 function game.fightWin()
@@ -465,6 +492,9 @@ function game.fightWin()
     game.resetGameState()
     Money = lastMoney + math.random(1, 7)
     boughtCards = lastCards
+
+    Poison = false
+    TwoFaced = false
 end
 
 return game

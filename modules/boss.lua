@@ -14,7 +14,7 @@ function Boss:new(world, x, y, settings)
     
     -- Boss AI variables:
     instance.Difficulty     = settings.Difficulty or 1         -- e.g. multiplier for other stats
-    instance.AttackSpeed    = settings.AttackSpeed or 1        -- can affect animation timing
+    instance.AttackSpeed    = settings.AttackSpeed or 0.2        -- can affect animation timing
     instance.AttackDamage   = settings.AttackDamage or 10      -- damage per attack
     instance.AttackInterval = settings.AttackInterval or 2     -- seconds between attacks
     instance.MaxDurability  = settings.Durability or 300       -- max boss health
@@ -65,6 +65,11 @@ function Boss:moveTowards(player, dt)
     local dx = px - bx
     local dy = py - by
     local distance = math.sqrt(dx * dx + dy * dy)
+
+    if self.bossPoison then
+        self.Durability = self.Durability - 0.5
+    end
+
     if distance > 0 then
         dx = dx / distance
         dy = dy / distance

@@ -13,7 +13,7 @@ local gameFontLarge
 
 local buttonWidth = 160  -- Button width
 local buttonHeight = 50  -- Button height
-local buttonSpacing = 30 -- Spacing between buttons
+local buttonSpacing = 25 -- Spacing between buttons
 local hoverColor = {0.4, 0.8, 1}
 local normalColor = {0.2, 0.6, 1}
 local clickedFlashDuration = 0.15
@@ -23,7 +23,7 @@ local clickedButton = nil
 local cardImage
 local easterEggFiles = {}
 local currentCardImage
-local cardWidth, cardHeight = 180, 270  -- Increased card image size
+local cardWidth, cardHeight = 160, 230  
 
 local konamiSequence = {"up","up","down","down","left","right","left","right","b","a"}
 local konamiIndex = 1
@@ -79,13 +79,17 @@ function mainmenu.update(dt)
 end
 
 function mainmenu.draw()
-    local currentBgColor = {0.05, 0.05, 0.08}
-    local gradientTime = love.timer.getTime()
+    local gradientTime = 0
     local stars = {}
+    local currentBgColor = {0.1, 0.1, 0.2}  
+    local targetBgColor = {0.1, 0.1, 0.2}   
+    local colorTransitionSpeed = 1       
+
+    background.draw(currentBgColor, gradientTime, stars)
     for i = 1, 200 do
         table.insert(stars, {x = love.math.random(0, love.graphics.getWidth()), y = love.math.random(0, love.graphics.getHeight())})
     end
-    background.draw(currentBgColor, gradientTime, stars)
+    
 
     if effect then
         effect(function()
