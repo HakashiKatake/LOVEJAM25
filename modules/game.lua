@@ -23,32 +23,32 @@ local Money = 10
 
 local gradientTime = 0
 local stars = {}
-local currentBgColor = {0.1, 0.1, 0.2}  
-local targetBgColor = {0.1, 0.1, 0.2}   
-local colorTransitionSpeed = 1           
+local currentBgColor = {0.1, 0.1, 0.2}
+local targetBgColor = {0.1, 0.1, 0.2}
+local colorTransitionSpeed = 1
 
 local cardAnimations = {}
 
-local hoverScale = 1.1  
-local hoverSpeed = 10   
+local hoverScale = 1.1
+local hoverSpeed = 10
 
 local removedCardIndex = nil
 local removalTimer = 0
-local removalDuration = 0.5  
+local removalDuration = 0.5
 
 local playButton = {
-    x = 350,  
-    y = 200,  
-    width = 100,  
-    height = 50,  
-    text = "Start",  
-    hovered = false,  
-    clicked = false,  
-    scale = 1,  
-    targetScale = 1,  
-    color = {0.2, 0.6, 0.2},  
-    clickTimer = 0,  
-    visible = true  
+    x = 350,
+    y = 200,
+    width = 100,
+    height = 50,
+    text = "Start",
+    hovered = false,
+    clicked = false,
+    scale = 1,
+    targetScale = 1,
+    color = {0.2, 0.6, 0.2},
+    clickTimer = 0,
+    visible = true
 }
 
 -- Player, boss, and related variables.
@@ -69,16 +69,31 @@ attackBonus = 0
 Poison = false
 TwoFaced = false
 
-boss = nil  -- will be assigned a boss instance from our boss module
-
+boss = nil  -- Will be assigned a boss instance from our boss module
 worldGravity = 800
 
 local maxBoughtCards = 5
 
 math.randomseed(os.time())
 
+-- Win popup variables and buttons
+local winPopup = false
+local winButtons = {
+    restart = { x = 300, y = 250, w = 200, h = 50, text = "Restart" },
+    mainmenu = { x = 300, y = 320, w = 200, h = 50, text = "Main Menu" }
+}
+
+-- Pause popup variables and buttons
+local pausePopup = false
+local pauseButtons = {
+    resume   = { x = 300, y = 250, w = 200, h = 50, text = "Resume" },
+    mainmenu = { x = 300, y = 320, w = 200, h = 50, text = "Main Menu" }
+}
+
+----------------------------------------------------------------
+-- Reset the entire game state (initial state)
+----------------------------------------------------------------
 function game.resetGameState()
-    -- Reset all game state variables to their initial values
     possibleCards = card.getPossibleCards()
     chosenCards = {}
     boughtCards = {}
@@ -92,10 +107,12 @@ function game.resetGameState()
     cardAnimations = {}
     removedCardIndex = nil
     removalTimer = 0
+
     playButton.visible = true
     playButton.clicked = false
     playButton.scale = 1
     playButton.targetScale = 1
+
     isSpawned = false
     player = nil
     ground = nil
@@ -105,27 +122,30 @@ function game.resetGameState()
     TwoFaced = false
     worldGravity = 800
     maxBoughtCards = 5
+    winPopup = false
+    pausePopup = false
 
-    -- Reinitialize the world
     world = wf.newWorld(0, worldGravity, true)
     world:addCollisionClass("Ground")
     world:addCollisionClass("PlayerTrigger")
     world:addCollisionClass("Boss")
 
-    -- Reinitialize cards
     card.drawCards(amountCards, possibleCards, chosenCards, cardAnimations, cardY)
 end
 
+----------------------------------------------------------------
+-- Load
+----------------------------------------------------------------
 function game.load()
     love.window.setTitle("LÖVEJAM25")
-    world = wf.newWorld(0, worldGravity, true) 
+    world = wf.newWorld(0, worldGravity, true)
 
     shove.setResolution(800, 600, {fitMethod = "aspect"})
     shove.setWindowMode(800, 600, {resizable = false})
 
-    world:addCollisionClass("Ground")  
-    world:addCollisionClass("PlayerTrigger")  
-    world:addCollisionClass("Boss") 
+    world:addCollisionClass("Ground")
+    world:addCollisionClass("PlayerTrigger")
+    world:addCollisionClass("Boss")
 
     gameFont = love.graphics.newFont("source/fonts/Jersey10.ttf", 25)
     love.graphics.setFont(gameFont)
@@ -154,37 +174,44 @@ function game.load()
 
     card.drawCards(amountCards, possibleCards, chosenCards, cardAnimations, cardY)
 
-    -- Initialize Poison and TwoFaced states
     Poison = false
     TwoFaced = false
+    winPopup = false
+    pausePopup = false
 end
 
+----------------------------------------------------------------
+-- Update
+----------------------------------------------------------------
 function game.update(dt)
     world:update(dt)
+
+    -- Pause or win popup stops game updates
+    if pausePopup or winPopup then
+        return
+    end
 
     if isSpawned then
         playerTrigger:setPosition(player:getX(), player:getY())
 
-        if boss.Durability <= 1 and TwoFaced then
-            boss.Durability = 50
-            TwoFaced = false
-        end
-
-        if boss.Durability <= 1 and not TwoFaced then
-            game.fightWin()
+        if boss then
+            if boss.Durability <= 0 then
+                if TwoFaced then
+                    boss.Durability = 50
+                    TwoFaced = false
+                else
+                    game.fightWin()  -- trigger win popup
+                    boss = nil
+                end
+            end
         end
 
         if playerHealth <= 1 and not utility.tableContains(boughtCards, "Second Wind") then
             love.window.close()
         end
-
         if playerHealth <= 1 and utility.tableContains(boughtCards, "Second Wind") then
             playerHealth = 50
             boughtCards = {}
-        end
-
-        if playerHealth <= 1 and not utility.tableContains(boughtCards, "Second Wind") then
-            love.window.close()
         end
 
         if love.keyboard.isDown('a') then
@@ -201,7 +228,6 @@ function game.update(dt)
             end
         end
 
-        -- Update Poison state based on cards
         if utility.tableContains(boughtCards, "Antidote") then
             Poison = false
         elseif utility.tableContains(boughtCards, "Resilience") and math.random(1, 10) > 5 then
@@ -220,15 +246,14 @@ function game.update(dt)
             else
                 playerHealth = playerHealth + 50
             end
-
             utility.tableRemove(boughtCards, "Mushroom")
         end
 
         if utility.tableContains(boughtCards, "UNO Reverse") and Poison then
-            boss.bossPoison = true
+            if boss then boss.bossPoison = true end
             Poison = false
         else
-            boss.bossPoison = false
+            if boss then boss.bossPoison = false end
         end
 
         if utility.tableContains(boughtCards, "BUY BUY BUY") then
@@ -243,14 +268,13 @@ function game.update(dt)
             maxBoughtCards = 5
         end
 
-        -- Additional card effects (like Lucky Draw, gravity changes, etc.)
         if utility.tableContains(boughtCards, "Lucky Draw") then
-            if #boughtCards < maxBoughtCards then  
-                if #possibleCards > 0 then  
+            if #boughtCards < maxBoughtCards then
+                if #possibleCards > 0 then
                     local randomIndex = love.math.random(1, #possibleCards)
                     local randomCard = possibleCards[randomIndex]
                     table.insert(boughtCards, randomCard)
-                    print("Lucky Draw: Added " .. randomCard.Name .. " to boughtCards!")  
+                    print("Lucky Draw: Added " .. randomCard.Name .. " to boughtCards!")
                     for i, cardData in ipairs(boughtCards) do
                         if cardData.Name == "Lucky Draw" then
                             table.remove(boughtCards, i)
@@ -258,7 +282,7 @@ function game.update(dt)
                         end
                     end
                 else
-                    print("No cards left in possibleCards for Lucky Draw!")  
+                    print("No cards left in possibleCards for Lucky Draw!")
                 end
             else
                 print("Maximum number of cards reached! Cannot use Lucky Draw.")
@@ -268,7 +292,7 @@ function game.update(dt)
         if utility.tableContains(boughtCards, "Fly like a Bunny") then
             worldGravity = 700
         elseif utility.tableContains(boughtCards, "Who's Newton?") then
-            worldGravity = -800   
+            worldGravity = -800
         else
             worldGravity = 800
         end
@@ -277,7 +301,6 @@ function game.update(dt)
     end
 
     gradientTime = gradientTime + dt * 0.1
-
     for _, star in ipairs(stars) do
         star.y = star.y + star.speed
         if star.y > 600 then
@@ -286,7 +309,6 @@ function game.update(dt)
         end
     end
 
-    -- Update card animations with backward iteration for safe removal.
     for i = #cardAnimations, 1, -1 do
         local anim = cardAnimations[i]
         if anim.elapsed < anim.delay then
@@ -296,16 +318,16 @@ function game.update(dt)
         end
 
         if hoveredCardIndex == i then
-            anim.hoverScale = hoverScale  
+            anim.hoverScale = hoverScale
         else
-            anim.hoverScale = 1          
+            anim.hoverScale = 1
         end
         anim.scale = anim.scale + (anim.hoverScale - anim.scale) * hoverSpeed * dt
 
         if removedCardIndex == i then
             removalTimer = removalTimer + dt
-            anim.alpha = 1 - (removalTimer / removalDuration)  
-            anim.scale = anim.scale * 0.9  
+            anim.alpha = 1 - (removalTimer / removalDuration)
+            anim.scale = anim.scale * 0.9
 
             if removalTimer >= removalDuration then
                 table.remove(chosenCards, i)
@@ -316,10 +338,9 @@ function game.update(dt)
         end
     end
 
-    -- Update hovered card state.
     local mx, my = love.mouse.getPosition()
     hoveredCardIndex = nil
-    local startX = (800 - (amountCards * 120)) / 2  
+    local startX = (800 - (amountCards * 120)) / 2
     for i, cardData in ipairs(chosenCards) do
         local x = startX + (i - 1) * 120
         local y = cardAnimations[i].currentY
@@ -335,18 +356,16 @@ function game.update(dt)
         timer = 0
     end
 
-    -- Update play button state.
-    local mx, my = love.mouse.getPosition()
     playButton.hovered = mx > playButton.x and mx < playButton.x + playButton.width and
                          my > playButton.y and my < playButton.y + playButton.height
     playButton.targetScale = playButton.hovered and 1.1 or 1
 
     if playButton.clicked then
-        playButton.targetScale = 0.9  
-        playButton.clickTimer = playButton.clickTimer - dt  
+        playButton.targetScale = 0.9
+        playButton.clickTimer = playButton.clickTimer - dt
         if playButton.clickTimer <= 0 then
             playButton.clicked = false
-            playButton.visible = false  
+            playButton.visible = false
             chosenCards = {}
             cardAnimations = {}
             game.beginFight()
@@ -354,12 +373,14 @@ function game.update(dt)
     end
     playButton.scale = playButton.scale + (playButton.targetScale - playButton.scale) * 10 * dt
 
-    -- Update the boss if it exists.
     if boss and player then
         boss:update(dt, player)
     end
 end
 
+----------------------------------------------------------------
+-- Draw
+----------------------------------------------------------------
 function game.draw()
     shove.beginDraw()
         background.draw(currentBgColor, gradientTime, stars)
@@ -393,11 +414,11 @@ function game.draw()
 
             if #boughtCards > 0 then
                 love.graphics.setColor(1, 1, 1)
-                local yOffset = 80  
+                local yOffset = 80
                 for i, cardData in ipairs(boughtCards) do
                     local cardText = "[" .. i .. "]: " .. cardData.Name
                     love.graphics.printf(cardText, 0, yOffset, 800, "left")
-                    yOffset = yOffset + 20  
+                    yOffset = yOffset + 20
                 end
             end
 
@@ -405,16 +426,114 @@ function game.draw()
             card.drawPlayButton(playButton, gameFont)
         end)
 
+        if winPopup then
+            game.drawWinPopup()
+        end
+
+        if pausePopup then
+            game.drawPausePopup()
+        end
+
         love.graphics.setColor(1,1,1,1)
         world:draw()
     shove.endDraw()
 end
 
+----------------------------------------------------------------
+-- Draw Win Popup with Hover Effects
+----------------------------------------------------------------
+function game.drawWinPopup()
+    love.graphics.setColor(0, 0, 0, 0.7)
+    love.graphics.rectangle("fill", 0, 0, love.graphics.getWidth(), love.graphics.getHeight())
+
+    love.graphics.setColor(1, 1, 1)
+    local msg = "You Win!"
+    love.graphics.printf(msg, 0, 150, love.graphics.getWidth(), "center")
+
+    local mx, my = love.mouse.getPosition()
+    for key, btn in pairs(winButtons) do
+        local scale = 1
+        if mx > btn.x and mx < btn.x + btn.w and my > btn.y and my < btn.y + btn.h then
+            scale = 1.07
+        end
+        local drawX = btn.x - (btn.w * (scale - 1)) / 2
+        local drawY = btn.y - (btn.h * (scale - 1)) / 2
+        local drawW = btn.w * scale
+        local drawH = btn.h * scale
+
+        love.graphics.setColor(0.2, 0.6, 0.2)
+        love.graphics.rectangle("fill", drawX, drawY, drawW, drawH, 8, 8)
+        love.graphics.setColor(1, 1, 1)
+        love.graphics.printf(btn.text, drawX, drawY + (drawH / 4), drawW, "center")
+    end
+end
+
+----------------------------------------------------------------
+-- Draw Pause Popup with Hover Effects
+----------------------------------------------------------------
+function game.drawPausePopup()
+    love.graphics.setColor(0, 0, 0, 0.7)
+    love.graphics.rectangle("fill", 0, 0, love.graphics.getWidth(), love.graphics.getHeight())
+
+    love.graphics.setColor(1, 1, 1)
+    local msg = "Paused"
+    love.graphics.printf(msg, 0, 150, love.graphics.getWidth(), "center")
+
+    local mx, my = love.mouse.getPosition()
+    for key, btn in pairs(pauseButtons) do
+        local scale = 1
+        if mx > btn.x and mx < btn.x + btn.w and my > btn.y and my < btn.y + btn.h then
+            scale = 1.07
+        end
+        local drawX = btn.x - (btn.w * (scale - 1)) / 2
+        local drawY = btn.y - (btn.h * (scale - 1)) / 2
+        local drawW = btn.w * scale
+        local drawH = btn.h * scale
+
+        love.graphics.setColor(0.2, 0.6, 0.2)
+        love.graphics.rectangle("fill", drawX, drawY, drawW, drawH, 8, 8)
+        love.graphics.setColor(1, 1, 1)
+        love.graphics.printf(btn.text, drawX, drawY + (drawH / 4), drawW, "center")
+    end
+end
+
+----------------------------------------------------------------
+-- Mouse pressed
+----------------------------------------------------------------
 function game.mousepressed(x, y, button)
-    if button == 1 then  
+    if button == 1 then
+        if pausePopup then
+            for key, btn in pairs(pauseButtons) do
+                if x > btn.x and x < btn.x + btn.w and y > btn.y and y < btn.y + btn.h then
+                    if key == "resume" then
+                        pausePopup = false
+                    elseif key == "mainmenu" then
+                        game.resetGameState()
+                        currentState = "menu"
+                    end
+                    return
+                end
+            end
+        end
+
+        if winPopup then
+            for key, btn in pairs(winButtons) do
+                if x > btn.x and x < btn.x + btn.w and y > btn.y and y < btn.y + btn.h then
+                    if key == "restart" then
+                        game.resetGameState()  -- resets to initial state with Start button visible
+                        winPopup = false
+                    elseif key == "mainmenu" then
+                        game.resetGameState()
+                        currentState = "menu"
+                    end
+                    return
+                end
+            end
+        end
+
         if isSpawned and boss and playerTrigger then
             if playerTrigger:enter('Boss') then
-                boss.Durability = boss.Durability - (attackDamage + attackBonus)
+                boss:takeDamage(attackDamage + attackBonus)
                 print("Boss hit! Health: " .. boss.Durability)
             end
         end
@@ -422,37 +541,37 @@ function game.mousepressed(x, y, button)
         if playButton.visible and x > playButton.x and x < playButton.x + playButton.width and
            y > playButton.y and y < playButton.y + playButton.height then
             playButton.clicked = true
-            playButton.clickTimer = 0.1  
+            playButton.clickTimer = 0.1
         else
-            local startX = (800 - (amountCards * 120)) / 2  
+            local startX = (800 - (amountCards * 120)) / 2
             for i, cardData in ipairs(chosenCards) do
                 local cardX = startX + (i - 1) * 120
                 local cardY = cardAnimations[i].currentY
                 if x > cardX and x < cardX + 100 and y > cardY and y < cardY + 140 then
                     if Money >= cardData.Price then
-                        if #boughtCards < maxBoughtCards then  
-                            Money = Money - cardData.Price  
-                            table.insert(boughtCards, cardData)  
-                            table.remove(possibleCards, i)  
-                            removedCardIndex = i  
+                        if #boughtCards < maxBoughtCards then
+                            Money = Money - cardData.Price
+                            table.insert(boughtCards, cardData)
+                            table.remove(possibleCards, i)
+                            removedCardIndex = i
                         else
-                            print("Maximum number of cards reached!")  
+                            print("Maximum number of cards reached!")
                         end
                     else
-                        print("Not enough money!")  
+                        print("Not enough money!")
                     end
                     break
                 end
             end
 
             for i, cardData in ipairs(boughtCards) do
-                local cardX = 10  
-                local cardY = 80 + (i - 1) * 20  
+                local cardX = 10
+                local cardY = 80 + (i - 1) * 20
                 if x > cardX and x < cardX + 200 and y > cardY and y < cardY + 20 then
                     local sellPrice = math.floor(cardData.Price / 3)
                     Money = Money + sellPrice
                     table.remove(boughtCards, i)
-                    table.insert(possibleCards, cardData)  
+                    table.insert(possibleCards, cardData)
                     print("Sold " .. cardData.Name .. " for $" .. sellPrice)
                     break
                 end
@@ -461,15 +580,29 @@ function game.mousepressed(x, y, button)
     end
 end
 
+----------------------------------------------------------------
+-- Key pressed
+----------------------------------------------------------------
 function game.keypressed(key)
+    if pausePopup or winPopup then
+        if key == 'escape' then
+            pausePopup = false
+        end
+        return
+    end
+
     if key == 'r' then
         card.drawCards(amountCards, possibleCards, chosenCards, cardAnimations, cardY)
     elseif key == 'escape' then
-        love.window.close()
+        if isSpawned and not winPopup then
+            pausePopup = not pausePopup
+        else
+            love.window.close()
+        end
     elseif key == 'q' then
         boughtCards = {}
     elseif key == '-' then
-        boss.Durability = boss.Durability - 30
+        if boss then boss:takeDamage(30) end
     elseif key == '=' then
         playerHealth = playerHealth - 10
     elseif key == 'space' and canJump then
@@ -483,24 +616,28 @@ function game.keypressed(key)
     end
 end
 
+----------------------------------------------------------------
+-- Begin the fight
+----------------------------------------------------------------
 function game.beginFight()
     targetBgColor = { love.math.random(), love.math.random(), love.math.random() }
     spawner.spawnPlayer(world, playerX, playerY)
     spawner.spawnGround(world)
-    spawner.spawnBoss(world)  -- spawn the boss via the spawner module
+    spawner.spawnBoss(world)
 
-    boss.bossPoison = false
+    if boss then
+        boss.bossPoison = false
+    end
+    isSpawned = true
+
+    playButton.visible = false
 end
 
+----------------------------------------------------------------
+-- Called when the boss is defeated
+----------------------------------------------------------------
 function game.fightWin()
-    local lastMoney = Money
-    local lastCards = boughtCards
-    game.resetGameState()
-    Money = lastMoney + math.random(1, 7)
-    boughtCards = lastCards
-
-    Poison = false
-    TwoFaced = false
+    winPopup = true
 end
 
 return game
