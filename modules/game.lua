@@ -1,4 +1,3 @@
-shove = require 'libraries.shove'
 local wf = require 'libraries.windfield'
 local moonshine = require 'libraries.moonshine'
 
@@ -140,12 +139,9 @@ function game.load()
     love.window.setTitle("LÖVEJAM25")
     world = wf.newWorld(0, worldGravity, true)
 
-    shove.setResolution(800, 600, {fitMethod = "aspect"})
-    shove.setWindowMode(800, 600, {resizable = false})
-
-    world:addCollisionClass("Ground")
-    world:addCollisionClass("PlayerTrigger")
-    world:addCollisionClass("Boss")
+    world:addCollisionClass("Ground")  
+    world:addCollisionClass("PlayerTrigger")  
+    world:addCollisionClass("Boss") 
 
     gameFont = love.graphics.newFont("source/fonts/Jersey10.ttf", 25)
     love.graphics.setFont(gameFont)
@@ -253,7 +249,9 @@ function game.update(dt)
             if boss then boss.bossPoison = true end
             Poison = false
         else
-            if boss then boss.bossPoison = false end
+            if boss then
+                boss.bossPoison = false
+            end
         end
 
         if utility.tableContains(boughtCards, "BUY BUY BUY") then
@@ -382,61 +380,51 @@ end
 -- Draw
 ----------------------------------------------------------------
 function game.draw()
-    shove.beginDraw()
-        background.draw(currentBgColor, gradientTime, stars)
-        world:setQueryDebugDrawing(true)
+    background.draw(currentBgColor, gradientTime, stars)
+    world:setQueryDebugDrawing(true)
 
-        effect(function()
-            love.graphics.setColor(1, 1, 1)
-            if Poison and not isSpawned then
-                love.graphics.printf("Smells weird...", 0, 170, 800, "center")
-            elseif TwoFaced and not isSpawned then
-                love.graphics.printf("I hear shrieking...", 0, 170, 800, "center")
-            end
-            if isSpawned then
+    effect(function()
+        love.graphics.setColor(1, 1, 1)
+        if Poison and not isSpawned then
+            love.graphics.printf("Smells weird...", 0, 170, 800, "center")
+        elseif TwoFaced and not isSpawned then
+            love.graphics.printf("I hear shrieking...", 0, 170, 800, "center")
+        end
+         if isSpawned then
                 -- do nothing
-            else
-                love.graphics.printf("Money: $" .. Money, 0, 15, 800, "center")
-            end
-            love.graphics.printf("Cards: " .. #boughtCards .. "/" .. maxBoughtCards, 0, 50, 800, "center")
+        else
+            love.graphics.printf("Money: $" .. Money, 0, 15, 800, "center")
+        end
+        love.graphics.printf("Cards: " .. #boughtCards .. "/" .. maxBoughtCards, 0, 50, 800, "center")
 
-            if player then
-                local px, py = player:getX(), player:getY()
-                love.graphics.setColor(0, 0, 0)
-                love.graphics.rectangle("fill", px - 25, py - 40, 50, 6)
-                love.graphics.setColor(1, 0, 0)
-                love.graphics.rectangle("fill", px - 25, py - 40, (playerHealth / playerMaxHealth) * 50, 6)
-            end
-
-            if boss then
-                boss:draw()
-            end
-
-            if #boughtCards > 0 then
-                love.graphics.setColor(1, 1, 1)
-                local yOffset = 80
-                for i, cardData in ipairs(boughtCards) do
-                    local cardText = "[" .. i .. "]: " .. cardData.Name
-                    love.graphics.printf(cardText, 0, yOffset, 800, "left")
-                    yOffset = yOffset + 20
-                end
-            end
-
-            card.drawCardsUI(chosenCards, cardAnimations, hoveredCardIndex, timer, gameFont)
-            card.drawPlayButton(playButton, gameFont)
-        end)
-
-        if winPopup then
-            game.drawWinPopup()
+        if player then
+            local px, py = player:getX(), player:getY()
+            love.graphics.setColor(0, 0, 0)
+            love.graphics.rectangle("fill", px - 25, py - 40, 50, 6)
+            love.graphics.setColor(1, 0, 0)
+            love.graphics.rectangle("fill", px - 25, py - 40, (playerHealth / playerMaxHealth) * 50, 6)
         end
 
-        if pausePopup then
-            game.drawPausePopup()
+        if boss then
+            boss:draw()
         end
 
-        love.graphics.setColor(1,1,1,1)
-        world:draw()
-    shove.endDraw()
+        if #boughtCards > 0 then
+            love.graphics.setColor(1, 1, 1)
+            local yOffset = 80  
+            for i, cardData in ipairs(boughtCards) do
+                local cardText = "[" .. i .. "]: " .. cardData.Name
+                love.graphics.printf(cardText, 0, yOffset, 800, "left")
+                yOffset = yOffset + 20  
+            end
+        end
+
+        card.drawCardsUI(chosenCards, cardAnimations, hoveredCardIndex, timer, gameFont)
+        card.drawPlayButton(playButton, gameFont)
+    end)
+    
+    love.graphics.setColor(1,1,1,1)
+    world:draw()
 end
 
 ----------------------------------------------------------------

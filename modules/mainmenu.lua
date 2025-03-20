@@ -1,4 +1,3 @@
-shove = require 'libraries.shove'
 local game = require 'modules.game'
 local moonshine = require 'libraries.moonshine'
 
@@ -32,9 +31,6 @@ local konamiIndex = 1
 
 function mainmenu.load()
     love.window.setTitle("LÖVEJAM25")
-
-    shove.setResolution(800, 600, {fitMethod = "aspect"})
-    shove.setWindowMode(800, 600, {resizable = false})
 
     gameFont = love.graphics.newFont("source/fonts/Jersey10.ttf", 28)
     gameFontLarge = love.graphics.newFont("source/fonts/Jersey10.ttf", 69)
@@ -85,27 +81,24 @@ function mainmenu.update(dt)
 end
 
 function mainmenu.draw()
-    shove.beginDraw()
-        local gradientTime = 0
-        local stars = {}
-        local currentBgColor = {0.1, 0.1, 0.2}  
-        local targetBgColor = {0.1, 0.1, 0.2}   
-        local colorTransitionSpeed = 1       
+    local gradientTime = 0
+    local stars = {}
+    local currentBgColor = {0.1, 0.1, 0.2}  
+    local targetBgColor = {0.1, 0.1, 0.2}   
+    local colorTransitionSpeed = 1       
 
-        background.draw(currentBgColor, gradientTime, stars)
-        for i = 1, 200 do
-            table.insert(stars, {x = love.math.random(0, love.graphics.getWidth()), y = love.math.random(0, love.graphics.getHeight())})
-        end
+    background.draw(currentBgColor, gradientTime, stars)
+    for i = 1, 200 do
+        table.insert(stars, {x = love.math.random(0, love.graphics.getWidth()), y = love.math.random(0, love.graphics.getHeight())})
+    end
         
-
-        if effect then
-            effect(function()
-                drawMenu()
-            end)
-        else
+    if effect then
+        effect(function()
             drawMenu()
-        end
-    shove.endDraw()
+        end)
+    else
+        drawMenu()
+    end
 end
 
 function drawMenu()
