@@ -1,9 +1,9 @@
 local game = require 'modules.game'
 local moonshine = require 'libraries.moonshine'
-
 local lfs = love.filesystem
 local background = require 'modules.background'
 local credits = require 'modules.credits'
+local utility = require 'modules.utility'
 
 local mainmenu = {}
 
@@ -12,42 +12,47 @@ local effect
 local gameFont
 local gameFontLarge
 
-local buttonWidth = 160  -- Button width
-local buttonHeight = 50  -- Button height
-local buttonSpacing = 25 -- Spacing between buttons
-local hoverColor = {0.4, 0.8, 1}
-local normalColor = {0.2, 0.6, 1}
+local buttonWidth, buttonHeight = 180, 60
+local buttonSpacing = 35
+local hoverColor = {0.4, 1, 0.4, 0.6}
+local normalColor = {0.4, 1, 0.4}
 local clickedFlashDuration = 0.15
-local clickedTimer = 0
-local clickedButton = nil
+local clickedTimer, clickedButton = 0, nil
 
-local cardImage
+local cardImage, currentCardImage
 local easterEggFiles = {}
-local currentCardImage
-local cardWidth, cardHeight = 160, 230  
+local cardWidth, cardHeight = 120, 170  -- Smaller card size
 
-local konamiSequence = {"up","up","down","down","left","right","left","right","b","a"}
+local konamiSequence = {"up", "up", "down", "down", "left", "right", "left", "right", "b", "a"}
 local konamiIndex = 1
+
+local cardTargetDX, cardTargetDY = 0, 0
+local cardCurrentDX, cardCurrentDY = 0, 0
+local wiggleTimer = 0
+local stars = {}
 
 function mainmenu.load()
     love.window.setTitle("LÖVEJAM25")
 
     gameFont = love.graphics.newFont("source/fonts/Jersey10.ttf", 28)
-    gameFontLarge = love.graphics.newFont("source/fonts/Jersey10.ttf", 69)
+    gameFontLarge = love.graphics.newFont("source/fonts/Jersey10.ttf", 72)
     love.graphics.setFont(gameFont)
 
     effect = moonshine(moonshine.effects.filmgrain)
-        .chain(moonshine.effects.vignette)
-        .chain(moonshine.effects.scanlines)
-        .chain(moonshine.effects.chromasep)
+    .chain(moonshine.effects.vignette)
+    .chain(moonshine.effects.scanlines)
+    .chain(moonshine.effects.chromasep)
 
+    effect.vignette.opacity = 0.55
     effect.filmgrain.size = 3
     effect.scanlines.opacity = 0.2
+    effect.filmgrain.size = 2
+    effect.chromasep.radius = 1.5
 
-    local screenW, _ = love.graphics.getDimensions()
+    local screenW = love.graphics.getWidth()
     local totalWidth = (buttonWidth * 3) + (buttonSpacing * 2)
     local startX = (screenW / 2) - (totalWidth / 2)
-    local startY = 150
+    local startY = 200
 
     local menuItems = {"Play", "Credits", "Quit"}
     for i, text in ipairs(menuItems) do
@@ -69,6 +74,10 @@ function mainmenu.load()
             table.insert(easterEggFiles, file)
         end
     end
+
+    for i = 1, 200 do
+        table.insert(stars, {x = love.math.random(0, screenW), y = love.math.random(0, love.graphics.getHeight()), speed = love.math.random(5, 20) / 10})
+    end
 end
 
 function mainmenu.update(dt)
@@ -78,80 +87,85 @@ function mainmenu.update(dt)
             clickedButton = nil
         end
     end
+
+    wiggleTimer = wiggleTimer + dt * 2
+
+    local mx, my = love.mouse.getPosition()
+    local cx, cy = love.graphics.getWidth() / 2, love.graphics.getHeight() / 2 + 100
+
+    cardTargetDX = (mx - cx) / 90
+    cardTargetDY = (my - cy) / 90
+
+    cardCurrentDX = cardCurrentDX + (cardTargetDX - cardCurrentDX) * 5 * dt
+    cardCurrentDY = cardCurrentDY + (cardTargetDY - cardCurrentDY) * 5 * dt
+
+    for _, star in ipairs(stars) do
+        star.y = star.y + star.speed
+        if star.y > love.graphics.getHeight() then
+            star.y = 0
+            star.x = love.math.random(0, love.graphics.getWidth())
+        end
+    end
 end
 
 function mainmenu.draw()
-    local gradientTime = 0
-    local stars = {}
-    local currentBgColor = {0.1, 0.1, 0.2}  
-    local targetBgColor = {0.1, 0.1, 0.2}   
-    local colorTransitionSpeed = 1       
-
-    background.draw(currentBgColor, gradientTime, stars)
-    for i = 1, 200 do
-        table.insert(stars, {x = love.math.random(0, love.graphics.getWidth()), y = love.math.random(0, love.graphics.getHeight())})
-    end
-        
-    if effect then
-        effect(function()
-            drawMenu()
-        end)
-    else
+    effect(function()
+        background.draw({0.05, 0.05, 0.1}, 0, stars)
         drawMenu()
-    end
+    end)
 end
 
 function drawMenu()
-    love.graphics.setFont(gameFontLarge)
-    love.graphics.printf("LÖVEJAM25", 0, 60, love.graphics.getWidth(), "center")
-    love.graphics.setFont(gameFont)
+        love.graphics.setFont(gameFontLarge)
+        love.graphics.setColor(1, 1, 1)
+        love.graphics.printf("LÖVEJAM25", 0, 80 + math.sin(wiggleTimer) * 5, love.graphics.getWidth(), "center")
 
-    local mx, my = love.mouse.getPosition()
+        love.graphics.setFont(gameFont)
+        local mx, my = love.mouse.getPosition()
 
-    for _, button in ipairs(buttons) do
-        local isHovered = mx > button.x and mx < button.x + button.w and my > button.y and my < button.y + button.h
-        local isClicked = (clickedButton == button)
-        local color = {0.1, 0.8, 0.1}
-        local scale = 1
+        for _, button in ipairs(buttons) do
+            local isHovered = mx > button.x and mx < button.x + button.w and my > button.y and my < button.y + button.h
+            local isClicked = (clickedButton == button)
+            local color = normalColor
+            local scale = 1
 
-        if isClicked then
-            color = {1, 1, 1}
-        elseif isHovered then
-            color = {0.4, 1, 0.4}
-            scale = 1.07
+            if isClicked then
+                color = {1, 1, 1}
+            elseif isHovered then
+                color = hoverColor
+                scale = 1.1 + math.sin(wiggleTimer * 2) * 0.02
+            end
+
+            love.graphics.setColor(0, 0, 0, 0.4)
+            love.graphics.rectangle("fill", button.x + 4, button.y + 4, button.w, button.h, 10, 10)
+
+            love.graphics.setColor(color)
+            love.graphics.rectangle("fill", button.x, button.y, button.w, button.h, 10, 10)
+
+            love.graphics.setColor(1, 1, 1)
+            love.graphics.printf(button.text, button.x, button.y + (button.h / 4), button.w, "center")
         end
 
-        local drawX = button.x - (button.w * (scale - 1)) / 2
-        local drawY = button.y - (button.h * (scale - 1)) / 2
-        local drawW = button.w * scale
-        local drawH = button.h * scale
-
-        love.graphics.setColor(0, 0, 0, 0.4)
-        love.graphics.rectangle("fill", drawX + 4, drawY + 4, drawW, drawH, 8, 8)  -- Reduced corner rounding
-
-        love.graphics.setColor(color)
-        love.graphics.rectangle("fill", drawX, drawY, drawW, drawH, 8, 8)  -- Reduced corner rounding
-
-        love.graphics.setColor(1, 1, 1)
-        love.graphics.printf(button.text, drawX, drawY + (drawH / 4), drawW, "center")
-    end
-
-    local mx, my = love.mouse.getPosition()
-    drawCard(mx, my)
+        drawCard(mx, my)
 end
 
 function drawCard(mx, my)
-    local cx = love.graphics.getWidth() / 2
-    local cy = love.graphics.getHeight() / 2 + 100
+    local cx, cy = love.graphics.getWidth() / 2, love.graphics.getHeight() / 2 + 100
 
-    -- Adjust responsiveness for smoother movement
-    local dx = (mx - cx) / 80  -- Smoother responsiveness
-    local dy = (my - cy) / 80  -- Smoother responsiveness
+    local wiggleX = math.sin(wiggleTimer) * 0.05
+    local wiggleY = math.cos(wiggleTimer) * 0.05
+
+    local lift = math.sqrt(cardCurrentDX^2 + cardCurrentDY^2) * 30
 
     love.graphics.push()
-    love.graphics.translate(cx, cy)
-    love.graphics.rotate(-dx * 0.15)  -- Smoother rotation
-    love.graphics.scale(1, 1 + dy * 0.03)  -- Smoother scaling
+    love.graphics.translate(cx, cy - lift)
+    love.graphics.rotate(cardCurrentDX * 0.2 + wiggleX)
+    love.graphics.scale(1, 1 + cardCurrentDY * 0.05 + wiggleY)
+
+    love.graphics.setColor(0, 0, 0, 0.3)
+    love.graphics.rectangle("fill", -cardWidth/2, -cardHeight/2 + 8, cardWidth, cardHeight, 12, 12)
+
+    love.graphics.setColor(1, 1, 1)
     love.graphics.draw(currentCardImage, -cardWidth/2, -cardHeight/2, 0, cardWidth / currentCardImage:getWidth(), cardHeight / currentCardImage:getHeight())
     love.graphics.pop()
 end
@@ -164,13 +178,14 @@ function mainmenu.mousepressed(x, y, button)
                 clickedTimer = clickedFlashDuration
 
                 if btn.action == "play" then
+                    
                     currentState = "game"
                     game.load()
                 elseif btn.action == "quit" then
                     love.event.quit()
                 elseif btn.action == "credits" then
                     currentState = "credits"
-                    credits.load()  
+                    credits.load()
                 end
             end
         end
