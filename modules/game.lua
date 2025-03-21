@@ -79,7 +79,7 @@ math.randomseed(os.time())
 -- Win popup variables and buttons
 local winPopup = false
 local winButtons = {
-    restart = { x = 300, y = 250, w = 200, h = 50, text = "Restart" },
+    restart = { x = 300, y = 250, w = 200, h = 50, text = "Next Fight" },
     mainmenu = { x = 300, y = 320, w = 200, h = 50, text = "Main Menu" }
 }
 
@@ -519,8 +519,20 @@ function game.mousepressed(x, y, button)
             for key, btn in pairs(winButtons) do
                 if x > btn.x and x < btn.x + btn.w and y > btn.y and y < btn.y + btn.h then
                     if key == "restart" then
-                        game.resetGameState()  -- resets to initial state with Start button visible
+                        local prevCards = {}
+                        local prevMoney = {}
+
+                        prevCards = boughtCards
+                        prevMoney = Money
+
+                        player = nil
+                        boss = nil
                         winPopup = false
+                        
+                        game.resetGameState()
+
+                        Money = prevMoney
+                        boughtCards = prevCards
                     elseif key == "mainmenu" then
                         game.resetGameState()
                         currentState = "menu"
@@ -545,8 +557,13 @@ function game.mousepressed(x, y, button)
             local startX = (800 - (amountCards * 120)) / 2
             for i, cardData in ipairs(chosenCards) do
                 local cardX = startX + (i - 1) * 120
-                local cardY = cardAnimations[i].currentY
-                if x > cardX and x < cardX + 100 and y > cardY and y < cardY + 140 then
+                local cardY = cardAnimations[i].currentY  -- Use the animated Y position
+                local cardWidth = 100 * cardAnimations[i].scale
+                local cardHeight = 140 * cardAnimations[i].scale
+
+                -- Check if the mouse is within the card's bounds
+                if x > cardX - (cardWidth - 100) / 2 and x < cardX + (cardWidth + 100) / 2 and
+                   y > cardY - (cardHeight - 140) / 2 and y < cardY + (cardHeight + 140) / 2 then
                     if Money >= cardData.Price then
                         if #boughtCards < maxBoughtCards then
                             Money = Money - cardData.Price
