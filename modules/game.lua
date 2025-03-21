@@ -65,6 +65,10 @@ attackDamage = 10
 attackSpeed = 1
 attackBonus = 0
 
+playerRunSheet = 'source\Sprites\Player\Player_Run_Spritesheet.png'
+playerIdleSheet = 'source\Sprites\Player\Player_Idle_Spritesheet.png'
+playerAttackSheet = 'source\Sprites\Player\Player_Attack_Spritesheet.png'
+
 Poison = false
 TwoFaced = false
 
