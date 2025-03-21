@@ -91,7 +91,7 @@ function mainmenu.update(dt)
     wiggleTimer = wiggleTimer + dt * 2
 
     local mx, my = love.mouse.getPosition()
-    local cx, cy = love.graphics.getWidth() / 2, love.graphics.getHeight() / 2 + 100
+    local cx, cy = love.graphics.getWidth() / 2, love.graphics.getHeight() / 2 + 150  -- Adjusted cy to lower the card
 
     cardTargetDX = (mx - cx) / 90
     cardTargetDY = (my - cy) / 90
@@ -116,41 +116,41 @@ function mainmenu.draw()
 end
 
 function drawMenu()
-        love.graphics.setFont(gameFontLarge)
-        love.graphics.setColor(1, 1, 1)
-        love.graphics.printf("LÖVEJAM25", 0, 80 + math.sin(wiggleTimer) * 5, love.graphics.getWidth(), "center")
+    love.graphics.setFont(gameFontLarge)
+    love.graphics.setColor(1, 1, 1)
+    love.graphics.printf("LÖVEJAM25", 0, 80 + math.sin(wiggleTimer) * 5, love.graphics.getWidth(), "center")
 
-        love.graphics.setFont(gameFont)
-        local mx, my = love.mouse.getPosition()
+    love.graphics.setFont(gameFont)
+    local mx, my = love.mouse.getPosition()
 
-        for _, button in ipairs(buttons) do
-            local isHovered = mx > button.x and mx < button.x + button.w and my > button.y and my < button.y + button.h
-            local isClicked = (clickedButton == button)
-            local color = normalColor
-            local scale = 1
+    for _, button in ipairs(buttons) do
+        local isHovered = mx > button.x and mx < button.x + button.w and my > button.y and my < button.y + button.h
+        local isClicked = (clickedButton == button)
+        local color = normalColor
+        local scale = 1
 
-            if isClicked then
-                color = {1, 1, 1}
-            elseif isHovered then
-                color = hoverColor
-                scale = 1.1 + math.sin(wiggleTimer * 2) * 0.02
-            end
-
-            love.graphics.setColor(0, 0, 0, 0.4)
-            love.graphics.rectangle("fill", button.x + 4, button.y + 4, button.w, button.h, 10, 10)
-
-            love.graphics.setColor(color)
-            love.graphics.rectangle("fill", button.x, button.y, button.w, button.h, 10, 10)
-
-            love.graphics.setColor(1, 1, 1)
-            love.graphics.printf(button.text, button.x, button.y + (button.h / 4), button.w, "center")
+        if isClicked then
+            color = {1, 1, 1}
+        elseif isHovered then
+            color = hoverColor
+            scale = 1.1 + math.sin(wiggleTimer * 2) * 0.02
         end
 
-        drawCard(mx, my)
+        love.graphics.setColor(0, 0, 0, 0.4)
+        love.graphics.rectangle("fill", button.x + 4, button.y + 4, button.w, button.h, 10, 10)
+
+        love.graphics.setColor(color)
+        love.graphics.rectangle("fill", button.x, button.y, button.w, button.h, 10, 10)
+
+        love.graphics.setColor(1, 1, 1)
+        love.graphics.printf(button.text, button.x, button.y + (button.h / 4), button.w, "center")
+    end
+
+    drawCard(mx, my)
 end
 
 function drawCard(mx, my)
-    local cx, cy = love.graphics.getWidth() / 2, love.graphics.getHeight() / 2 + 100
+    local cx, cy = love.graphics.getWidth() / 2, love.graphics.getHeight() / 2 + 150  -- Adjusted cy to lower the card
 
     local wiggleX = math.sin(wiggleTimer) * 0.05
     local wiggleY = math.cos(wiggleTimer) * 0.05
@@ -178,7 +178,6 @@ function mainmenu.mousepressed(x, y, button)
                 clickedTimer = clickedFlashDuration
 
                 if btn.action == "play" then
-                    
                     currentState = "game"
                     game.load()
                 elseif btn.action == "quit" then
