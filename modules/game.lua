@@ -1,10 +1,12 @@
 local wf = require 'libraries.windfield'
 local moonshine = require 'libraries.moonshine'
+local anim8 = require 'libraries.anim8'
 
 local card = require 'modules.card'
 local background = require 'modules.background'
 local spawner = require 'modules.spawner'
 local utility = require 'modules.utility'
+local spritesheets = require 'modules.spritesheets'
 
 local game = {}
 
@@ -64,10 +66,6 @@ playerMaxHealth = 100
 attackDamage = 10
 attackSpeed = 1
 attackBonus = 0
-
-playerRunSheet = 'source\Sprites\Player\Player_Run_Spritesheet.png'
-playerIdleSheet = 'source\Sprites\Player\Player_Idle_Spritesheet.png'
-playerAttackSheet = 'source\Sprites\Player\Player_Attack_Spritesheet.png'
 
 Poison = false
 TwoFaced = false
@@ -217,6 +215,15 @@ function game.update(dt)
             end
         end
 
+        if love.keyboard.isDown('a') or love.keyboard.isDown('d') then
+            spritesheets.currentAnim = spritesheets.runAnim
+        else
+            spritesheets.currentAnim = spritesheets.idleAnim
+        end
+
+        -- Update animation
+        spritesheets.currentAnim:update(dt)
+
         -- Check for player death
         if playerHealth <= 1 then
             if utility.tableContains(boughtCards, "Second Wind") then
@@ -230,17 +237,21 @@ function game.update(dt)
 
         -- Player movement
         if love.keyboard.isDown('a') then
+            spritesheets.idle = false
             player:setX(playerX - playerSpeed)
             playerX = playerX - playerSpeed
             if Poison then
                 playerHealth = playerHealth - math.random(0.1, 1)
             end
         elseif love.keyboard.isDown('d') then
+            spritesheets.idle = true
             player:setX(playerX + playerSpeed)
             playerX = playerX + playerSpeed
             if Poison then
                 playerHealth = playerHealth - math.random(0.1, 1)
             end
+        else
+            idle = true
         end
 
         -- Card effects
@@ -425,6 +436,11 @@ function game.draw()
 
         if not isSpawned then
             love.graphics.printf("Run: ".. difficulty, 0, 150, 800, "center")
+        end
+
+        if player then
+            local px, py = player:getX(), player:getY()
+            spritesheets.currentAnim:draw(spritesheets.playerRunSheet, px, py, 0, 2, 2) -- Adjust scale if needed
         end
 
         if player then

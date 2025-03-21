@@ -25,7 +25,7 @@ local text = {
     "",
     "Used:",
     "Font; Jersey10",
-    "Libraries; Moonshine, Windfield",
+    "Libraries; Moonshine, Windfield, Anim8",
     "",
     "Special Thanks to LÖVE Community"
 }
