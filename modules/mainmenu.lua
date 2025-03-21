@@ -32,7 +32,7 @@ local wiggleTimer = 0
 local stars = {}
 
 function mainmenu.load()
-    love.window.setTitle("LÖVEJAM25")
+    love.window.setTitle("Spade Knight")
 
     gameFont = love.graphics.newFont("source/fonts/Jersey10.ttf", 28)
     gameFontLarge = love.graphics.newFont("source/fonts/Jersey10.ttf", 72)
@@ -118,7 +118,7 @@ end
 function drawMenu()
     love.graphics.setFont(gameFontLarge)
     love.graphics.setColor(1, 1, 1)
-    love.graphics.printf("LÖVEJAM25", 0, 80 + math.sin(wiggleTimer) * 5, love.graphics.getWidth(), "center")
+    love.graphics.printf("Spade Knight", 0, 80 + math.sin(wiggleTimer) * 5, love.graphics.getWidth(), "center")
 
     love.graphics.setFont(gameFont)
     local mx, my = love.mouse.getPosition()

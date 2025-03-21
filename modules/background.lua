@@ -1,28 +1,30 @@
 local background = {}
 
+-- Load the background image
+local bgImage = love.graphics.newImage("source/Sprites/Background/Background.png")
+
 function background.draw(currentBgColor, gradientTime, stars)
-    -- Gradient parameters
-    local gradientAmplitude = 0.2  -- Controls the intensity of the gradient effect
-    local gradientFrequency = 0.005 -- Controls the speed of the gradient effect
-
-    -- Draw the gradient background
+    -- Draw the background image (scaled to the window size 800x600)
+    love.graphics.setColor(1, 1, 1, 1)
+    local scaleX = 800 / bgImage:getWidth()
+    local scaleY = 600 / bgImage:getHeight()
+    love.graphics.draw(bgImage, 0, 0, 0, scaleX, scaleY)
+    
+    -- Draw a gradient overlay
+    local gradientAmplitude = 0.2  -- Intensity of gradient
+    local gradientFrequency = 0.005 -- Speed of gradient effect
     for y = 0, 600, 2 do
-        -- Calculate the color variation using a sine wave
         local colorVariation = (math.sin(gradientTime + y * gradientFrequency) + 1) / 2
-
-        -- Adjust the background color based on the variation
         love.graphics.setColor(
             currentBgColor[1] + colorVariation * gradientAmplitude,
             currentBgColor[2] + colorVariation * gradientAmplitude,
-            currentBgColor[3] + colorVariation * (gradientAmplitude + 0.1)  -- Slightly stronger effect on the blue channel
+            currentBgColor[3] + colorVariation * (gradientAmplitude + 0.1)
         )
-
-        -- Draw a horizontal line for the gradient
         love.graphics.rectangle("fill", 0, y, 800, 2)
     end
 
-    -- Draw the stars
-    love.graphics.setColor(1, 1, 1, 0.8)  -- Set star color once
+    -- Draw the stars on top
+    love.graphics.setColor(1, 1, 1, 0.8)
     for _, star in ipairs(stars) do
         love.graphics.points(star.x, star.y)
     end

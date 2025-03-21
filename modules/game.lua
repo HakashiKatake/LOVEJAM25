@@ -3,7 +3,7 @@ local moonshine = require 'libraries.moonshine'
 local anim8 = require 'libraries.anim8'
 
 local card = require 'modules.card'
-local background = require 'modules.background'
+local background = require 'modules.background'  -- Ensure background is required
 local spawner = require 'modules.spawner'
 local utility = require 'modules.utility'
 local spritesheets = require 'modules.spritesheets'
@@ -170,7 +170,7 @@ end
 -- Load
 ----------------------------------------------------------------
 function game.load()
-    love.window.setTitle("LÖVEJAM25")
+    love.window.setTitle("Spade Knight")
     world = wf.newWorld(0, worldGravity, true)
     world:addCollisionClass("Ground")
     world:addCollisionClass("PlayerTrigger")
@@ -229,7 +229,7 @@ function game.update(dt)
     if isSpawned then
         playerTrigger:setPosition(player:getX(), player:getY())
 
-        -- Simple ground check: if player's velocity is near 0 and they're near ground level, allow jump
+        -- Simple ground check: if player's velocity is near 0 and near ground, allow jump
         if ground and player then
             local gx, gy = ground:getPosition()
             local vx, vy = player:getLinearVelocity()
@@ -253,7 +253,7 @@ function game.update(dt)
             end
         end
 
-        -- Use attack and jump animations if needed
+        -- Choose animation: Attack > Jump > Run/Idle
         if isAttacking then
             spritesheets.currentAnim = spritesheets.attackAnim
         elseif isJumping then
@@ -303,6 +303,10 @@ function game.update(dt)
         end
 
         world:setGravity(0, worldGravity)
+
+        -- Call card behaviour logic from separate module
+        playerSpeed, playerHealth, maxBoughtCards, worldGravity, amountCards =
+            cardbehaviour.checkCardBehaviour(boughtCards, possibleCards, playerSpeed, playerHealth, maxBoughtCards, worldGravity, amountCards, boss)
     end
 
     gradientTime = gradientTime + dt * 0.1
@@ -604,9 +608,9 @@ function game.mousepressed(x, y, button)
                         player = nil
                         boss = nil
                         winPopup = false
-
+                        
                         game.resetGameState()
-
+                        
                         Money = prevMoney + winPMoney
                         boughtCards = prevCards
                         difficulty = difficulty + 1
