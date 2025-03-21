@@ -67,6 +67,8 @@ attackDamage = 10
 attackSpeed = 1
 attackBonus = 0
 
+playerFlipX = 2
+
 Poison = false
 TwoFaced = false
 
@@ -240,11 +242,13 @@ function game.update(dt)
             spritesheets.idle = false
             player:setX(playerX - playerSpeed)
             playerX = playerX - playerSpeed
+            playerFlipX = -2
             if Poison then
                 playerHealth = playerHealth - math.random(0.1, 1)
             end
         elseif love.keyboard.isDown('d') then
-            spritesheets.idle = true
+            playerFlipX = 2
+            spritesheets.idle = false
             player:setX(playerX + playerSpeed)
             playerX = playerX + playerSpeed
             if Poison then
@@ -439,9 +443,21 @@ function game.draw()
         end
 
         if player then
-            local px, py = player:getX(), player:getY()
-            spritesheets.currentAnim:draw(spritesheets.playerRunSheet, px, py, 0, 2, 2) -- Adjust scale if needed
+            if player then
+                local px, py = player:getX(), player:getY()
+                local frame = spritesheets.currentAnim  -- Animation object
+                local sprite = spritesheets.playerRunSheet  -- Sprite sheet
+        
+                if sprite and frame then
+                    local sw, sh = frame:getDimensions() 
+                    local ox = (playerFlipX < 0) and (sw / 2) or (sw / 2) 
+                    
+                    frame:draw(sprite, px, py - 10, 0, playerFlipX, 2, ox, sh / 2)
+                end
+            end
         end
+           
+        
 
         if player then
             local px, py = player:getX(), player:getY()
@@ -756,6 +772,8 @@ function game.keypressed(key)
         else
             love.window.close()
         end
+    elseif key == 'y' then
+        spritesheets.currentAnim = spritesheets.idleAnim
     elseif key == 'q' then
         boughtCards = {}
     elseif key == '-' then
