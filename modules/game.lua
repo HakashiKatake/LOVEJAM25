@@ -7,7 +7,7 @@ local background = require 'modules.background'
 local spawner = require 'modules.spawner'
 local utility = require 'modules.utility'
 local spritesheets = require 'modules.spritesheets'
-local cardBehaviour = require 'modules.cardBehaviour'
+local cardbehaviour = require 'modules.cardbehaviour'
 
 local game = {}
 
@@ -230,6 +230,9 @@ function game.update(dt)
     if isSpawned then
         playerTrigger:setPosition(player:getX(), player:getY())
 
+        -- Card effects...
+        cardbehaviour:checkCardBehaviour()
+
         -- Simple ground check
         if ground and player then
             local gx, gy = ground:getPosition()
@@ -313,9 +316,6 @@ function game.update(dt)
                 playerHealth = playerHealth - math.random(0.1, 1)
             end
         end
-
-        -- Card effects...
-        cardBehaviour:update(dt)
 
         world:setGravity(0, worldGravity)
     end

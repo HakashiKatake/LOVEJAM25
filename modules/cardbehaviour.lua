@@ -1,11 +1,8 @@
-local card = require 'modules.card'
-local background = require 'modules.background'
-local spawner = require 'modules.spawner'
 local utility = require 'modules.utility'
 
-local cardBehaviour = {}
+local cardbehaviour = {}
 
-function cardBehaviour.update(dt)
+function checkCardBehaviour()
     if utility.tableContains(boughtCards, "Antidote") then
         Poison = false
     elseif utility.tableContains(boughtCards, "Resilience") and math.random(1, 10) > 5 then
