@@ -155,7 +155,7 @@ function game.resetGameState()
 
     canJump = false
     isJumping = false
-    isAttacking = false  -- reset attack state
+    isAttacking = false
     playerAttackTimer = attackCooldown
 
     world = wf.newWorld(0, worldGravity, true)
@@ -222,7 +222,6 @@ function game.update(dt)
         return
     end
 
-    -- Attack cooldown timer
     if playerAttackTimer < attackCooldown then
         playerAttackTimer = playerAttackTimer + dt
     end
@@ -230,10 +229,7 @@ function game.update(dt)
     if isSpawned then
         playerTrigger:setPosition(player:getX(), player:getY())
 
-        -- Card effects...
-        cardbehaviour:checkCardBehaviour()
-
-        -- Simple ground check
+        -- Simple ground check: if player's velocity is near 0 and they're near ground level, allow jump
         if ground and player then
             local gx, gy = ground:getPosition()
             local vx, vy = player:getLinearVelocity()
@@ -245,7 +241,6 @@ function game.update(dt)
             end
         end
 
-        -- Boss HP check
         if boss and boss.Durability then
             if boss.Durability <= 0 then
                 if TwoFaced then
@@ -258,15 +253,12 @@ function game.update(dt)
             end
         end
 
-        -- Decide which animation to show
+        -- Use attack and jump animations if needed
         if isAttacking then
-            -- If attacking, show attackAnim
             spritesheets.currentAnim = spritesheets.attackAnim
         elseif isJumping then
-            -- If jumping, show jumpAnim
             spritesheets.currentAnim = spritesheets.jumpAnim
         else
-            -- Otherwise run or idle
             if love.keyboard.isDown('a') or love.keyboard.isDown('d') then
                 spritesheets.currentAnim = spritesheets.runAnim
             else
@@ -274,22 +266,16 @@ function game.update(dt)
             end
         end
 
-        -- Update the current animation
         spritesheets.currentAnim:update(dt)
 
-        -- If attacking, check if the animation finished (if using 'pauseAtEnd')
         if isAttacking then
-            -- If the current frame is the last frame, revert to idle/run after a short moment
             if spritesheets.currentAnim.position == #spritesheets.currentAnim.frames then
-                -- Attack animation ended
                 isAttacking = false
-                -- Reset the attack animation for next time
                 spritesheets.attackAnim:gotoFrame(1)
                 spritesheets.attackAnim:pause()
             end
         end
 
-        -- Health check
         if playerHealth <= 1 then
             if utility.tableContains(boughtCards, "Second Wind") then
                 playerHealth = 50
@@ -300,7 +286,6 @@ function game.update(dt)
             end
         end
 
-        -- Movement
         if love.keyboard.isDown('a') then
             player:setX(playerX - playerSpeed)
             playerX = playerX - playerSpeed
@@ -320,7 +305,6 @@ function game.update(dt)
         world:setGravity(0, worldGravity)
     end
 
-    -- Starfield, card animations, etc...
     gradientTime = gradientTime + dt * 0.1
     for _, star in ipairs(stars) do
         star.y = star.y + star.speed
@@ -407,13 +391,11 @@ function game.draw()
         background.draw(currentBgColor, gradientTime, stars)
         world:setQueryDebugDrawing(true)
 
-        -- Money text
         love.graphics.setColor(0, 0, 0, 0.5)
         love.graphics.printf("Money: $" .. Money, 2, 17, 800, "center")
         love.graphics.setColor(1, 1, 1)
         love.graphics.printf("Money: $" .. Money, 0, 15, 800, "center")
 
-        -- Cards text
         love.graphics.setColor(0, 0, 0, 0.5)
         love.graphics.printf("Cards: " .. #boughtCards .. "/" .. maxBoughtCards, 2, 52, 800, "center")
         love.graphics.setColor(1, 1, 1)
@@ -423,13 +405,10 @@ function game.draw()
             love.graphics.printf("Run: " .. difficulty, 0, 150, 800, "center")
         end
 
-        -- Draw player with current animation
         if player then
             local px, py = player:getX(), player:getY()
             local frame = spritesheets.currentAnim
             local sprite
-
-            -- If attacking, draw from the attack sheet
             if isAttacking then
                 sprite = spritesheets.playerAttackSheet
             elseif isJumping then
@@ -437,7 +416,6 @@ function game.draw()
             else
                 sprite = spritesheets.playerRunSheet
             end
-
             if sprite and frame then
                 local sw, sh = frame:getDimensions()
                 local ox = (playerFlipX < 0) and (sw / 2) or (sw / 2)
@@ -490,19 +468,13 @@ function game.drawWinPopup()
     love.graphics.setColor(0, 0, 0, 0.7)
     love.graphics.rectangle("fill", 0, 0, love.graphics.getWidth(), love.graphics.getHeight())
 
-    -- Draw shadow for "You Win!" text
     love.graphics.setColor(0, 0, 0, 0.5)
     love.graphics.printf("You Win!", 2, 132, love.graphics.getWidth(), "center")
-
-    -- Draw actual "You Win!" text
     love.graphics.setColor(1, 1, 1)
     love.graphics.printf("You Win!", 0, 130, love.graphics.getWidth(), "center")
 
-    -- Draw shadow for "Money Earned" text
     love.graphics.setColor(0, 0, 0, 0.5)
     love.graphics.printf("Money Earned: $" .. winPMoney, 2, 192, love.graphics.getWidth(), "center")
-
-    -- Draw actual "Money Earned" text
     love.graphics.setColor(1, 1, 1)
     love.graphics.printf("Money Earned: $" .. winPMoney, 0, 190, love.graphics.getWidth(), "center")
 
@@ -512,20 +484,16 @@ function game.drawWinPopup()
         if mx > btn.x and mx < btn.x + btn.w and my > btn.y and my < btn.y + btn.h then
             scale = 1.07
         end
-
         local horizontalPadding = 60
         local paddedW = btn.w + horizontalPadding
-
         local drawX = btn.x - ((paddedW * (scale - 1)) / 2) - (horizontalPadding / 2)
         local drawY = btn.y - (btn.h * (scale - 1)) / 2
         local drawW = paddedW * scale
         local drawH = btn.h * scale
 
-        -- Draw button shadow
         love.graphics.setColor(0, 0, 0, 0.5)
         love.graphics.rectangle("fill", drawX + 5, drawY + 5, drawW, drawH, 12, 12)
 
-        -- Draw actual button
         love.graphics.setColor(0.2, 0.6, 0.2)
         love.graphics.rectangle("fill", drawX, drawY, drawW, drawH, 12, 12)
         love.graphics.setColor(1, 1, 1)
@@ -541,19 +509,13 @@ function game.drawLosePopup()
     love.graphics.setColor(0, 0, 0, 0.7)
     love.graphics.rectangle("fill", 0, 0, love.graphics.getWidth(), love.graphics.getHeight())
 
-    -- Draw shadow for "You Lost!" text
     love.graphics.setColor(0, 0, 0, 0.5)
     love.graphics.printf("You Lost!", 2, 112, love.graphics.getWidth(), "center")
-
-    -- Draw actual "You Lost!" text
     love.graphics.setColor(1, 1, 1)
     love.graphics.printf("You Lost!", 0, 110, love.graphics.getWidth(), "center")
 
-    -- Draw shadow for "Runs Survived" text
     love.graphics.setColor(0, 0, 0, 0.5)
     love.graphics.printf("Runs Survived: " .. (difficulty - 1), 2, 172, love.graphics.getWidth(), "center")
-
-    -- Draw actual "Runs Survived" text
     love.graphics.setColor(1, 1, 1)
     love.graphics.printf("Runs Survived: " .. (difficulty - 1), 0, 170, love.graphics.getWidth(), "center")
 
@@ -563,20 +525,16 @@ function game.drawLosePopup()
         if mx > btn.x and mx < btn.x + btn.w and my > btn.y and my < btn.y + btn.h then
             scale = 1.07
         end
-
         local horizontalPadding = 60
         local paddedW = btn.w + horizontalPadding
-
         local drawX = btn.x - ((paddedW * (scale - 1)) / 2) - (horizontalPadding / 2)
         local drawY = btn.y - (btn.h * (scale - 1)) / 2
         local drawW = paddedW * scale
         local drawH = btn.h * scale
 
-        -- Draw button shadow
         love.graphics.setColor(0, 0, 0, 0.5)
         love.graphics.rectangle("fill", drawX + 5, drawY + 5, drawW, drawH, 12, 12)
 
-        -- Draw actual button
         love.graphics.setColor(0.6, 0.2, 0.2)
         love.graphics.rectangle("fill", drawX, drawY, drawW, drawH, 12, 12)
         love.graphics.setColor(1, 1, 1)
@@ -592,11 +550,8 @@ function game.drawPausePopup()
     love.graphics.setColor(0, 0, 0, 0.7)
     love.graphics.rectangle("fill", 0, 0, love.graphics.getWidth(), love.graphics.getHeight())
 
-    -- Draw shadow for "Paused" text
     love.graphics.setColor(0, 0, 0, 0.5)
     love.graphics.printf("Paused", 2, 152, love.graphics.getWidth(), "center")
-
-    -- Draw actual "Paused" text
     love.graphics.setColor(1, 1, 1)
     love.graphics.printf("Paused", 0, 150, love.graphics.getWidth(), "center")
 
@@ -606,17 +561,14 @@ function game.drawPausePopup()
         if mx > btn.x and mx < btn.x + btn.w and my > btn.y and my < btn.y + btn.h then
             scale = 1.07
         end
-
         local drawX = btn.x - (btn.w * (scale - 1)) / 2
         local drawY = btn.y - (btn.h * (scale - 1)) / 2
         local drawW = btn.w * scale
         local drawH = btn.h * scale
 
-        -- Draw button shadow
         love.graphics.setColor(0, 0, 0, 0.5)
         love.graphics.rectangle("fill", drawX + 5, drawY + 5, drawW, drawH, 8, 8)
 
-        -- Draw actual button
         love.graphics.setColor(0.2, 0.6, 0.2)
         love.graphics.rectangle("fill", drawX, drawY, drawW, drawH, 8, 8)
         love.graphics.setColor(1, 1, 1)
@@ -652,9 +604,9 @@ function game.mousepressed(x, y, button)
                         player = nil
                         boss = nil
                         winPopup = false
-                        
+
                         game.resetGameState()
-                        
+
                         Money = prevMoney + winPMoney
                         boughtCards = prevCards
                         difficulty = difficulty + 1
@@ -759,7 +711,7 @@ function game.keypressed(key)
     elseif key == '=' then
         playerHealth = playerHealth - 10
     elseif key == 'space' then
-        -- Only jump if canJump is true and velocity is near 0
+        -- Jump: if can jump and not already jumping or attacking
         if canJump and not isJumping and not isAttacking then
             local vx, vy = player:getLinearVelocity()
             if math.abs(vy) < 0.1 then
@@ -770,16 +722,14 @@ function game.keypressed(key)
             end
         end
     elseif key == 'z' then
-        -- Attempt a melee attack if not currently attacking
+        -- Melee attack: if not attacking and cooldown met
         if (not isAttacking) and (playerAttackTimer >= attackCooldown) then
             isAttacking = true
             playerAttackTimer = 0
-            -- Switch to the attack animation from the start
             spritesheets.currentAnim = spritesheets.attackAnim
             spritesheets.attackAnim:gotoFrame(1)
             spritesheets.attackAnim:resume()
 
-            -- Check if boss in range
             if boss and player then
                 local bx, by = boss.collider:getPosition()
                 local px, py = player:getX(), player:getY()
