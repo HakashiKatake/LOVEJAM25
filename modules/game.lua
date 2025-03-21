@@ -635,7 +635,7 @@ function game.mousepressed(x, y, button)
                         pausePopup = false
                     elseif key == "mainmenu" then
                         game.resetGameState()
-                        currentState = "mainmenu"
+                        currentState = "menu"
                     end
                     return
                 end
@@ -664,7 +664,7 @@ function game.mousepressed(x, y, button)
                         difficulty = difficulty + 1
                     elseif key == "mainmenu" then
                         game.resetGameState()
-                        currentState = "mainmenu"
+                        currentState = "menu"
                     end
                     return
                 end
@@ -680,7 +680,7 @@ function game.mousepressed(x, y, button)
                         losePopup = false
                     elseif key == "mainmenu" then
                         game.resetGameState()
-                        currentState = "mainmenu"
+                        currentState = "menu"
                     end
                     return
                 end
