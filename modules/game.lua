@@ -10,7 +10,7 @@ local spritesheets = require 'modules.spritesheets'
 
 local game = {}
 
--- Global game state variables (cards, money, etc.)
+-- Global game state variables
 local world
 local possibleCards = {}
 local chosenCards = {}
@@ -18,18 +18,21 @@ local boughtCards = {}
 local amountCards = 3
 local hoveredCardIndex = nil
 local timer = 0
-local cardY = 400  
+local cardY = 400
 local gameFont
 local Money = 10
 
 local gradientTime = 0
 local stars = {}
 local currentBgColor = {0.05, 0.05, 0.1}
-local targetBgColor ={math.random(1, 255) / 255, math.random(1, 255) / 255, math.random(1, 255) / 255}
+local targetBgColor = {
+    math.random(1, 255)/255,
+    math.random(1, 255)/255,
+    math.random(1, 255)/255
+}
 local colorTransitionSpeed = 1
 
 local cardAnimations = {}
-
 local hoverScale = 1.1
 local hoverSpeed = 10
 
@@ -52,14 +55,18 @@ local playButton = {
     visible = true
 }
 
--- Player, boss, and related variables.
+-- Player, boss, and related variables
 player = nil
 ground = nil
 isSpawned = false
 playerX = 120
 playerY = 300
 playerSpeed = 3
+
+-- Jumping
+local jumpForce = 2500
 canJump = false
+local isJumping = false  -- For the jump animation
 
 playerHealth = 100
 playerMaxHealth = 100
@@ -72,7 +79,7 @@ playerFlipX = 2
 Poison = false
 TwoFaced = false
 
-boss = nil  -- Will be assigned a boss instance from our boss module
+boss = nil
 difficulty = 1
 winPMoney = math.random(1, difficulty)
 worldGravity = 800
@@ -81,27 +88,31 @@ local maxBoughtCards = 5
 
 math.randomseed(os.time())
 
--- Win popup variables and buttons
-local winPopup = false
+-- Attack system
+local attackCooldown = 0.5
+local playerAttackTimer = attackCooldown
+local isAttacking = false  -- Track if we're currently attacking
+
+-- Popups
+winPopup = false
+losePopup = false
+pausePopup = false
+
 local winButtons = {
     restart = { x = 300, y = 250, w = 200, h = 50, text = "Next Run" },
     mainmenu = { x = 300, y = 320, w = 200, h = 50, text = "Main Menu" }
 }
-
 local loseButtons = {
     restart = { x = 250, y = 300, w = 300, h = 60, text = "Restart" },
     mainmenu = { x = 250, y = 380, w = 300, h = 60, text = "Main Menu" }
 }
-
--- Pause popup variables and buttons
-local pausePopup = false
 local pauseButtons = {
-    resume   = { x = 300, y = 250, w = 200, h = 50, text = "Resume" },
+    resume = { x = 300, y = 250, w = 200, h = 50, text = "Resume" },
     mainmenu = { x = 300, y = 320, w = 200, h = 50, text = "Main Menu" }
 }
 
 ----------------------------------------------------------------
--- Reset the entire game state (initial state)
+-- Reset the entire game state
 ----------------------------------------------------------------
 function game.resetGameState()
     possibleCards = card.getPossibleCards()
@@ -114,7 +125,11 @@ function game.resetGameState()
     Money = 10
     gradientTime = 0
     currentBgColor = {0.05, 0.05, 0.1}
-    targetBgColor = {math.random(1, 255) / 255, math.random(1, 255) / 255, math.random(1, 255) / 255}
+    targetBgColor = {
+        math.random(1,255)/255,
+        math.random(1,255)/255,
+        math.random(1,255)/255
+    }
     cardAnimations = {}
     removedCardIndex = nil
     removalTimer = 0
@@ -134,7 +149,13 @@ function game.resetGameState()
     worldGravity = 800
     maxBoughtCards = 5
     winPopup = false
+    losePopup = false
     pausePopup = false
+
+    canJump = false
+    isJumping = false
+    isAttacking = false  -- reset attack state
+    playerAttackTimer = attackCooldown
 
     world = wf.newWorld(0, worldGravity, true)
     world:addCollisionClass("Ground")
@@ -150,7 +171,6 @@ end
 function game.load()
     love.window.setTitle("LÖVEJAM25")
     world = wf.newWorld(0, worldGravity, true)
-
     world:addCollisionClass("Ground")
     world:addCollisionClass("PlayerTrigger")
     world:addCollisionClass("Boss")
@@ -184,10 +204,10 @@ function game.load()
     end
 
     card.drawCards(amountCards, possibleCards, chosenCards, cardAnimations, cardY)
-
     Poison = false
     TwoFaced = false
     winPopup = false
+    losePopup = false
     pausePopup = false
 end
 
@@ -197,49 +217,87 @@ end
 function game.update(dt)
     world:update(dt)
 
-    -- Pause, win, or lose popup stops game updates
     if pausePopup or winPopup or losePopup then
         return
+    end
+
+    -- Attack cooldown timer
+    if playerAttackTimer < attackCooldown then
+        playerAttackTimer = playerAttackTimer + dt
     end
 
     if isSpawned then
         playerTrigger:setPosition(player:getX(), player:getY())
 
-        if boss then
+        -- Simple ground check
+        if ground and player then
+            local gx, gy = ground:getPosition()
+            local vx, vy = player:getLinearVelocity()
+            if math.abs(vy) < 1 and player:getY() >= gy - 60 then
+                canJump = true
+                if isJumping then
+                    isJumping = false
+                end
+            end
+        end
+
+        -- Boss HP check
+        if boss and boss.Durability then
             if boss.Durability <= 0 then
                 if TwoFaced then
                     boss.Durability = 50
                     TwoFaced = false
                 else
-                    game.fightWin()  -- Trigger win popup
+                    game.fightWin()
                     boss = nil
                 end
             end
         end
 
-        if love.keyboard.isDown('a') or love.keyboard.isDown('d') then
-            spritesheets.currentAnim = spritesheets.runAnim
+        -- Decide which animation to show
+        if isAttacking then
+            -- If attacking, show attackAnim
+            spritesheets.currentAnim = spritesheets.attackAnim
+        elseif isJumping then
+            -- If jumping, show jumpAnim
+            spritesheets.currentAnim = spritesheets.jumpAnim
         else
-            spritesheets.currentAnim = spritesheets.idleAnim
+            -- Otherwise run or idle
+            if love.keyboard.isDown('a') or love.keyboard.isDown('d') then
+                spritesheets.currentAnim = spritesheets.runAnim
+            else
+                spritesheets.currentAnim = spritesheets.idleAnim
+            end
         end
 
-        -- Update animation
+        -- Update the current animation
         spritesheets.currentAnim:update(dt)
 
-        -- Check for player death
+        -- If attacking, check if the animation finished (if using 'pauseAtEnd')
+        if isAttacking then
+            -- If the current frame is the last frame, revert to idle/run after a short moment
+            if spritesheets.currentAnim.position == #spritesheets.currentAnim.frames then
+                -- Attack animation ended
+                isAttacking = false
+                -- Reset the attack animation for next time
+                spritesheets.attackAnim:gotoFrame(1)
+                spritesheets.attackAnim:pause()
+            end
+        end
+
+        -- Health check
         if playerHealth <= 1 then
             if utility.tableContains(boughtCards, "Second Wind") then
                 playerHealth = 50
                 boughtCards = {}
             else
-                losePopup = true  -- Trigger lose popup
+                losePopup = true
                 isSpawned = false
             end
         end
 
-        -- Player movement
+        -- Movement
         if love.keyboard.isDown('a') then
-            spritesheets.idle = false
             player:setX(playerX - playerSpeed)
             playerX = playerX - playerSpeed
             playerFlipX = -2
@@ -248,17 +306,14 @@ function game.update(dt)
             end
         elseif love.keyboard.isDown('d') then
             playerFlipX = 2
-            spritesheets.idle = false
             player:setX(playerX + playerSpeed)
             playerX = playerX + playerSpeed
             if Poison then
                 playerHealth = playerHealth - math.random(0.1, 1)
             end
-        else
-            idle = true
         end
 
-        -- Card effects
+        -- Card effects...
         if utility.tableContains(boughtCards, "Antidote") then
             Poison = false
         elseif utility.tableContains(boughtCards, "Resilience") and math.random(1, 10) > 5 then
@@ -331,7 +386,7 @@ function game.update(dt)
         world:setGravity(0, worldGravity)
     end
 
-    -- Background star field
+    -- Starfield, card animations, etc...
     gradientTime = gradientTime + dt * 0.1
     for _, star in ipairs(stars) do
         star.y = star.y + star.speed
@@ -341,7 +396,6 @@ function game.update(dt)
         end
     end
 
-    -- Card animations
     for i = #cardAnimations, 1, -1 do
         local anim = cardAnimations[i]
         if anim.elapsed < anim.delay then
@@ -371,7 +425,6 @@ function game.update(dt)
         end
     end
 
-    -- Card hover detection
     local mx, my = love.mouse.getPosition()
     hoveredCardIndex = nil
     local startX = (800 - (amountCards * 120)) / 2
@@ -390,7 +443,6 @@ function game.update(dt)
         timer = 0
     end
 
-    -- Play button logic
     playButton.hovered = mx > playButton.x and mx < playButton.x + playButton.width and
                          my > playButton.y and my < playButton.y + playButton.height
     playButton.targetScale = playButton.hovered and 1.1 or 1
@@ -408,7 +460,6 @@ function game.update(dt)
     end
     playButton.scale = playButton.scale + (playButton.targetScale - playButton.scale) * 10 * dt
 
-    -- Update boss logic if present
     if boss and player then
         boss:update(dt, player)
     end
@@ -422,42 +473,43 @@ function game.draw()
         background.draw(currentBgColor, gradientTime, stars)
         world:setQueryDebugDrawing(true)
 
-        -- Draw shadow for "Money" text
+        -- Money text
         love.graphics.setColor(0, 0, 0, 0.5)
         love.graphics.printf("Money: $" .. Money, 2, 17, 800, "center")
-
-        -- Draw actual "Money" text
         love.graphics.setColor(1, 1, 1)
         love.graphics.printf("Money: $" .. Money, 0, 15, 800, "center")
 
-        -- Draw shadow for "Cards" text
+        -- Cards text
         love.graphics.setColor(0, 0, 0, 0.5)
         love.graphics.printf("Cards: " .. #boughtCards .. "/" .. maxBoughtCards, 2, 52, 800, "center")
-
-        -- Draw actual "Cards" text
         love.graphics.setColor(1, 1, 1)
         love.graphics.printf("Cards: " .. #boughtCards .. "/" .. maxBoughtCards, 0, 50, 800, "center")
 
         if not isSpawned then
-            love.graphics.printf("Run: ".. difficulty, 0, 150, 800, "center")
+            love.graphics.printf("Run: " .. difficulty, 0, 150, 800, "center")
         end
 
+        -- Draw player with current animation
         if player then
-            if player then
-                local px, py = player:getX(), player:getY()
-                local frame = spritesheets.currentAnim  -- Animation object
-                local sprite = spritesheets.playerRunSheet  -- Sprite sheet
-        
-                if sprite and frame then
-                    local sw, sh = frame:getDimensions() 
-                    local ox = (playerFlipX < 0) and (sw / 2) or (sw / 2) 
-                    
-                    frame:draw(sprite, px, py - 10, 0, playerFlipX, 2, ox, sh / 2)
-                end
+            local px, py = player:getX(), player:getY()
+            local frame = spritesheets.currentAnim
+            local sprite
+
+            -- If attacking, draw from the attack sheet
+            if isAttacking then
+                sprite = spritesheets.playerAttackSheet
+            elseif isJumping then
+                sprite = spritesheets.playerJumpSheet
+            else
+                sprite = spritesheets.playerRunSheet
+            end
+
+            if sprite and frame then
+                local sw, sh = frame:getDimensions()
+                local ox = (playerFlipX < 0) and (sw / 2) or (sw / 2)
+                frame:draw(sprite, px, py - 10, 0, playerFlipX, 2, ox, sh / 2)
             end
         end
-           
-        
 
         if player then
             local px, py = player:getX(), player:getY()
@@ -493,7 +545,7 @@ function game.draw()
         end
     end)
 
-    love.graphics.setColor(1,1,1,1)
+    love.graphics.setColor(1, 1, 1, 1)
     world:draw()
 end
 
@@ -643,7 +695,6 @@ end
 ----------------------------------------------------------------
 function game.mousepressed(x, y, button)
     if button == 1 then
-        -- Pause popup handling
         if pausePopup then
             for key, btn in pairs(pauseButtons) do
                 if x > btn.x and x < btn.x + btn.w and y > btn.y and y < btn.y + btn.h then
@@ -658,23 +709,18 @@ function game.mousepressed(x, y, button)
             end
         end
 
-        -- Win popup handling
         if winPopup then
             for key, btn in pairs(winButtons) do
                 if x > btn.x and x < btn.x + btn.w and y > btn.y and y < btn.y + btn.h then
                     if key == "restart" then
-                        local prevCards = {}
-                        local prevMoney = {}
-
-                        prevCards = boughtCards
-                        prevMoney = Money
-
+                        local prevCards = boughtCards
+                        local prevMoney = Money
                         player = nil
                         boss = nil
                         winPopup = false
                         
                         game.resetGameState()
-
+                        
                         Money = prevMoney + winPMoney
                         boughtCards = prevCards
                         difficulty = difficulty + 1
@@ -687,7 +733,6 @@ function game.mousepressed(x, y, button)
             end
         end
 
-        -- Lose popup handling
         if losePopup then
             for key, btn in pairs(loseButtons) do
                 if x > btn.x and x < btn.x + btn.w and y > btn.y and y < btn.y + btn.h then
@@ -703,23 +748,23 @@ function game.mousepressed(x, y, button)
             end
         end
 
-        -- Play button handling
+        if isSpawned and boss and playerTrigger then
+            if playerTrigger:enter('Boss') then
+                boss:takeDamage(attackDamage + attackBonus)
+                print("Boss hit! Health: " .. boss.Durability)
+            end
+        end
+
         if playButton.visible and x > playButton.x and x < playButton.x + playButton.width and
            y > playButton.y and y < playButton.y + playButton.height then
             playButton.clicked = true
             playButton.clickTimer = 0.1
         else
-            -- Card selection handling
             local startX = (800 - (amountCards * 120)) / 2
             for i, cardData in ipairs(chosenCards) do
                 local cardX = startX + (i - 1) * 120
-                local cardY = cardAnimations[i].currentY  -- Use the animated Y position
-                local cardWidth = 100 * cardAnimations[i].scale
-                local cardHeight = 140 * cardAnimations[i].scale
-
-                -- Check if the mouse is within the card's bounds
-                if x > cardX - (cardWidth - 100) / 2 and x < cardX + (cardWidth + 100) / 2 and
-                   y > cardY - (cardHeight - 140) / 2 and y < cardY + (cardHeight + 140) / 2 then
+                local cardY = cardAnimations[i].currentY
+                if x > cardX and x < cardX + 100 and y > cardY and y < cardY + 140 then
                     if Money >= cardData.Price then
                         if #boughtCards < maxBoughtCards then
                             Money = Money - cardData.Price
@@ -736,7 +781,6 @@ function game.mousepressed(x, y, button)
                 end
             end
 
-            -- Sell card handling
             for i, cardData in ipairs(boughtCards) do
                 local cardX = 10
                 local cardY = 80 + (i - 1) * 20
@@ -780,8 +824,38 @@ function game.keypressed(key)
         if boss then boss:takeDamage(30) end
     elseif key == '=' then
         playerHealth = playerHealth - 10
-    elseif key == 'space' and canJump then
-        player:applyLinearImpulse(0, -2300)
+    elseif key == 'space' then
+        -- Only jump if canJump is true and velocity is near 0
+        if canJump and not isJumping and not isAttacking then
+            local vx, vy = player:getLinearVelocity()
+            if math.abs(vy) < 0.1 then
+                player:applyLinearImpulse(0, -jumpForce)
+                canJump = false
+                isJumping = true
+                spritesheets.currentAnim = spritesheets.jumpAnim
+            end
+        end
+    elseif key == 'z' then
+        -- Attempt a melee attack if not currently attacking
+        if (not isAttacking) and (playerAttackTimer >= attackCooldown) then
+            isAttacking = true
+            playerAttackTimer = 0
+            -- Switch to the attack animation from the start
+            spritesheets.currentAnim = spritesheets.attackAnim
+            spritesheets.attackAnim:gotoFrame(1)
+            spritesheets.attackAnim:resume()
+
+            -- Check if boss in range
+            if boss and player then
+                local bx, by = boss.collider:getPosition()
+                local px, py = player:getX(), player:getY()
+                local dist = math.sqrt((px - bx)^2 + (py - by)^2)
+                if dist < 70 then
+                    boss:takeDamage(attackDamage + attackBonus)
+                    print("Player melee attacked boss! Boss health: " .. boss.Durability)
+                end
+            end
+        end
     elseif key == '1' then
         Money = Money + 10
     elseif key == '2' then
@@ -804,12 +878,11 @@ function game.beginFight()
         boss.bossPoison = false
     end
     isSpawned = true
-
     playButton.visible = false
 end
 
 ----------------------------------------------------------------
--- Called when the boss is defeated
+-- Called when boss is defeated
 ----------------------------------------------------------------
 function game.fightWin()
     winPopup = true
