@@ -33,6 +33,10 @@ local cardCurrentDX, cardCurrentDY = 0, 0
 local wiggleTimer = 0
 local stars = {}
 
+-- Load main menu theme music as a streaming source and set it to loop
+local mainTheme = love.audio.newSource("source/Music/maintheme.wav", "stream")
+mainTheme:setLooping(true)
+
 function mainmenu.load()
     love.window.setTitle("Spade Knight")
 
@@ -41,9 +45,9 @@ function mainmenu.load()
     love.graphics.setFont(gameFont)
 
     effect = moonshine(moonshine.effects.filmgrain)
-    .chain(moonshine.effects.vignette)
-    .chain(moonshine.effects.scanlines)
-    .chain(moonshine.effects.chromasep)
+        .chain(moonshine.effects.vignette)
+        .chain(moonshine.effects.scanlines)
+        .chain(moonshine.effects.chromasep)
 
     effect.vignette.opacity = 0.55
     effect.filmgrain.size = 3
@@ -80,11 +84,14 @@ function mainmenu.load()
     for i = 1, 200 do
         table.insert(stars, {x = love.math.random(0, screenW), y = love.math.random(0, love.graphics.getHeight()), speed = love.math.random(5, 20) / 10})
     end
+
+    -- Start main menu music
+    mainTheme:play()
 end
 
 function mainmenu.update(dt)
-    background.updateAnimationFrame(dt) -- Update animation state
-    background.update(dt) -- Update background logic
+    background.updateAnimationFrame(dt)
+    background.update(dt)
     
     if clickedButton then
         clickedTimer = clickedTimer - dt
@@ -96,7 +103,7 @@ function mainmenu.update(dt)
     wiggleTimer = wiggleTimer + dt * 2
 
     local mx, my = love.mouse.getPosition()
-    local cx, cy = love.graphics.getWidth() / 2, love.graphics.getHeight() / 2 + 150  -- Adjusted cy to lower the card
+    local cx, cy = love.graphics.getWidth() / 2, love.graphics.getHeight() / 2 + 150
 
     cardTargetDX = (mx - cx) / 90
     cardTargetDY = (my - cy) / 90
@@ -155,7 +162,8 @@ function drawMenu()
 end
 
 function drawCard(mx, my)
-    local cx, cy = love.graphics.getWidth() / 2, love.graphics.getHeight() / 2 + 150  -- Adjusted cy to lower the card
+    local cx = love.graphics.getWidth() / 2
+    local cy = love.graphics.getHeight() / 2 + 150
 
     local wiggleX = math.sin(wiggleTimer) * 0.05
     local wiggleY = math.cos(wiggleTimer) * 0.05
@@ -185,11 +193,13 @@ function mainmenu.mousepressed(x, y, button)
                 if btn.action == "play" then
                     currentState = "game"
                     game.load()
+                    mainTheme:stop() -- Stop main menu music when starting game
                 elseif btn.action == "quit" then
                     love.event.quit()
                 elseif btn.action == "credits" then
                     currentState = "credits"
                     credits.load()
+                    mainTheme:stop() -- Stop main menu music
                 end
             end
         end
