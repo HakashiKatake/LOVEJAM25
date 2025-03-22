@@ -7,7 +7,7 @@ function card.getPossibleCards()
         {Name = "Strength", Description = "Boost to Attack Damage", Price = 6, Sprite = love.graphics.newImage("Source/Sprites/Cards/strength.png")},
         {Name = "Quickhand", Description = "Boost to Attack Speed", Price = 7, Sprite = love.graphics.newImage("Source/Sprites/Cards/quickhand.png")},
         {Name = "Quickthinking", Description = "Boost to Speed", Price = 3, Sprite = love.graphics.newImage("Source/Sprites/Cards/quickthinking.png")},
-        {Name = "RGB", Description = "Boost to everything (lasts 10-20 seconds)", Price = 6, Sprite = love.graphics.newImage("Source/Sprites/Cards/rgb.png")},
+        {Name = "RGB", Description = "Boost to everything (lasts 10-20 seconds)", Price = 15, Sprite = love.graphics.newImage("Source/Sprites/Cards/rgb.png")},
         {Name = "Who's Newton?", Description = "Reverse Gravity", Price = 3, Sprite = love.graphics.newImage("Source/Sprites/Cards/newton.png")},
         {Name = "UNO Reverse", Description = "Apply current effect to the boss (lasts 10-20 seconds)", Price = 6, Sprite = love.graphics.newImage("Source/Sprites/Cards/uno_reverse.png")},
         {Name = "Thorns", Description = "Reflects a portion of damage taken", Price = 8, Sprite = love.graphics.newImage("Source/Sprites/Cards/thorns.png")},

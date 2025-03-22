@@ -627,6 +627,10 @@ end
 ----------------------------------------------------------------
 function game.mousepressed(x, y, button)
     if button == 1 then
+        if player then
+            attack()
+        end
+
         if pausePopup then
             for key, btn in pairs(pauseButtons) do
                 if x > btn.x and x < btn.x + btn.w and y > btn.y and y < btn.y + btn.h then
@@ -769,23 +773,8 @@ function game.keypressed(key)
         end
     elseif key == 'z' then
         -- Melee attack: if not attacking and cooldown met
-        if (not isAttacking) and (playerAttackTimer >= attackCooldown) then
-            isAttacking = true
-            playerAttackTimer = 0
-            spritesheets.currentAnim = spritesheets.attackAnim
-            spritesheets.attackAnim:gotoFrame(1)
-            spritesheets.attackAnim:resume()
-
-            if boss and player then
-                local bx, by = boss.collider:getPosition()
-                local px, py = player:getX(), player:getY()
-                local dist = math.sqrt((px - bx)^2 + (py - by)^2)
-                if dist < 120 then
-                    boss:takeDamage(attackDamage + attackBonus)
-                    print("Player melee attacked boss! Boss health: " .. boss.Durability)
-                end
-            end
-        end
+        
+        attack()
     elseif key == '1' then
         Money = Money + 10
     elseif key == '2' then
@@ -823,9 +812,27 @@ function game.fightWin()
     winPopup = true
     background.drawEffects = true
     background.doDrawBg = false
+end
 
-    -- Stop fight music when fight is over
-    fightTheme:stop()
+function attack()
+    if (not isAttacking) and (playerAttackTimer >= attackCooldown) then
+        isAttacking = true
+        playerAttackTimer = 0
+        spritesheets.currentAnim = spritesheets.attackAnim
+        spritesheets.attackAnim:gotoFrame(1)
+        spritesheets.attackAnim:resume()
+    
+        if boss and player then
+            local bx, by = boss.collider:getPosition()
+            local px, py = player:getX(), player:getY()
+            -- Increased hit radius from 70 to 120
+            local dist = math.sqrt((px - bx)^2 + (py - by)^2)
+            if dist < 120 then
+            boss:takeDamage(attackDamage + attackBonus)
+                print("Player melee attacked boss! Boss health: " .. boss.Durability)
+            end
+        end
+    end
 end
 
 return game
