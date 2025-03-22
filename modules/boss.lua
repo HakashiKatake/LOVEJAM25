@@ -1,25 +1,32 @@
 local Boss = {}
 Boss.__index = Boss
 
+-- Load the rock sprite once (global for this module)
+local rockSprite = love.graphics.newImage("source/Sprites/Boss/Attack/rock001.png")
+
+-- Create a new boss instance.
+-- world: the physics world (from windfield)
+-- x, y: starting coordinates
+-- settings: a table containing boss variables
 function Boss:new(world, x, y, settings)
     local instance = setmetatable({}, Boss)
     instance.world = world
     instance.collider = world:newRectangleCollider(x, y, 100, 100)
     instance.collider:setType("dynamic")
     instance.collider:setCollisionClass("Boss")
+    
+    instance.Difficulty     = settings.Difficulty or 1         -- e.g. multiplier for other stats
+    instance.AttackSpeed    = settings.AttackSpeed or 0.2        -- can affect animation timing
+    instance.AttackDamage   = settings.AttackDamage or 10        -- damage per attack
+    instance.AttackInterval = settings.AttackInterval or 2       -- seconds between attacks
+    instance.MaxDurability  = settings.Durability or 300         -- max boss health
+    instance.Durability     = instance.MaxDurability             -- current health
+    instance.Speed          = settings.Speed or 100              -- movement speed
+    instance.JumpForce      = settings.JumpForce or 500          -- jump impulse force
+    instance.Type           = settings.Type or "switcher"        -- boss type: "switcher" or "brute"
 
-    instance.Difficulty     = settings.Difficulty or 1
-    instance.AttackSpeed    = settings.AttackSpeed or 0.2
-    instance.AttackDamage   = settings.AttackDamage or 10
-    instance.AttackInterval = settings.AttackInterval or 2
-    instance.MaxDurability  = settings.Durability or 300
-    instance.Durability     = instance.MaxDurability
-    instance.Speed          = settings.Speed or 100
-    instance.JumpForce      = settings.JumpForce or 500
-    instance.Type           = settings.Type or "switcher"
-
-    instance.attackTimer = 0
-    instance.state = "idle"
+    instance.attackTimer = 0  -- counts time between attacks
+    instance.state = "idle"   -- can be expanded for more states
     instance.bossPoison = false
 
     instance.bullets = {}
@@ -98,8 +105,6 @@ function Boss:updateBullets(dt, player)
             if d < 25 then
                 if player.takeDamage then
                     player:takeDamage(b.damage)
-                else
-                    playerHealth = playerHealth - b.damage
                 end
                 table.remove(self.bullets, i)
             end
@@ -193,43 +198,48 @@ function Boss:attack(player)
     end
 end
 
--- Notice: We do NOT set boss = nil here. We only destroy the collider and let the game code handle the rest.
 function Boss:takeDamage(amount)
     self.Durability = self.Durability - amount
     if self.Durability <= 0 then
         print("Boss defeated!")
         self.collider:destroy()
-        -- No boss = nil line here, so the game can detect boss.Durability <= 1 and trigger the popup
     end
 end
 
 function Boss:draw()
+    -- Draw boss
     love.graphics.setColor(1, 0, 0)
     local x, y = self.collider:getPosition()
     love.graphics.rectangle("fill", x - 50, y - 50, 100, 100)
     love.graphics.setColor(1, 1, 1)
 
+    -- Draw bullets
     for _, b in ipairs(self.bullets) do
         love.graphics.setColor(1, 1, 0)
         love.graphics.circle("fill", b.x, b.y, 5)
     end
 
+    -- Draw rocks using the rock sprite
     for _, r in ipairs(self.rocks) do
-        love.graphics.setColor(0.6, 0.6, 0.6)
-        love.graphics.circle("fill", r.x, r.y, 15)
+        love.graphics.setColor(1, 1, 1, 1)
+        -- Draw the rock sprite centered at the rock's position
+        local ox = rockSprite:getWidth() / 2
+        local oy = rockSprite:getHeight() / 2
+        love.graphics.draw(rockSprite, r.x, r.y, 0, 1, 1, ox, oy)
     end
 
+    -- Draw boss health bar
     local screenWidth = love.graphics.getWidth()
     local healthBarWidth = 300
     local healthBarHeight = 25
     local healthPercentage = math.max(self.Durability / self.MaxDurability, 0)
-
+    
     local rColor = math.min(2 * (1 - healthPercentage), 1)
     local gColor = math.min(2 * healthPercentage, 1)
-
+    
     local barX = (screenWidth / 2) - (healthBarWidth / 2)
     local barY = 17
-
+    
     love.graphics.setColor(0, 0, 0)
     love.graphics.rectangle("fill", barX - 2, barY - 2, healthBarWidth + 4, healthBarHeight + 4)
     
