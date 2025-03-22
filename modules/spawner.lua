@@ -2,9 +2,25 @@ local spawner = {}
 local Boss = require("modules.boss")
 
 function spawner.spawnGround(world)
+    -- Ground collider
     ground = world:newRectangleCollider(0, 550, 800, 50)
     ground:setType('static')
     ground:setCollisionClass('Ground')
+
+    -- Roof collider
+    roof = world:newRectangleCollider(0, 0, 800, 10)
+    roof:setType('static')
+    roof:setCollisionClass('Ground')
+
+    -- Left wall collider
+    wallLeft = world:newRectangleCollider(0, 0, 10, 600)
+    wallLeft:setType('static')
+    wallLeft:setCollisionClass('Ground')
+
+    -- Right wall collider
+    wallRight = world:newRectangleCollider(790, 0, 10, 600)
+    wallRight:setType('static')
+    wallRight:setCollisionClass('Ground')
 end
 
 function spawner.spawnPlayer(world, playerX, playerY)

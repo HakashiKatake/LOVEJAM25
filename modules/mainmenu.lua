@@ -15,23 +15,26 @@ local gameFont
 local gameFontLarge
 
 local buttonWidth, buttonHeight = 180, 60
-local buttonSpacing = 35
-local hoverColor = {0.4, 1, 0.4, 0.6}
-local normalColor = {0.4, 1, 0.4}
+local buttonSpacing = 20 -- Reduced spacing between buttons
+local hoverColor = {0.2, 0.6, 1, 0.8} -- Cosmic blue hover color
+local normalColor = {0.1, 0.3, 0.6} -- Darker cosmic blue normal color
 local clickedFlashDuration = 0.15
 local clickedTimer, clickedButton = 0, nil
 
 local cardImage, currentCardImage
 local easterEggFiles = {}
 local cardWidth, cardHeight = 120, 190
+local cardTargetDX, cardTargetDY = 0, 0
+local cardCurrentDX, cardCurrentDY = 0, 0
+local wiggleTimer = 0
 
 local konamiSequence = {"up", "up", "down", "down", "left", "right", "left", "right", "b", "a"}
 local konamiIndex = 1
 
-local cardTargetDX, cardTargetDY = 0, 0
-local cardCurrentDX, cardCurrentDY = 0, 0
 local wiggleTimer = 0
 local stars = {}
+
+local version = "v0.40-JamEdition"
 
 -- Load main menu theme music as a streaming source and set it to loop
 local mainTheme = love.audio.newSource("source/Music/maintheme.wav", "stream")
@@ -56,17 +59,18 @@ function mainmenu.load()
     effect.chromasep.radius = 1.5
 
     local screenW = love.graphics.getWidth()
-    local totalWidth = (buttonWidth * 3) + (buttonSpacing * 2)
-    local startX = (screenW / 2) - (totalWidth / 2)
-    local startY = 200
+    local screenH = love.graphics.getHeight()
+    local startX = 50 -- Buttons on the left side
+    local startY = 300 -- Buttons lowered
 
     local menuItems = {"Play", "Credits", "Quit"}
+    local buttonWidths = {220, 180, 140} -- Different widths for Play, Credits, Quit
     for i, text in ipairs(menuItems) do
         table.insert(buttons, {
             text = text,
-            x = startX + (i - 1) * (buttonWidth + buttonSpacing),
-            y = startY,
-            w = buttonWidth,
+            x = startX,
+            y = startY + (i - 1) * (buttonHeight + buttonSpacing),
+            w = buttonWidths[i],
             h = buttonHeight,
             action = text:lower()
         })
@@ -82,7 +86,7 @@ function mainmenu.load()
     end
 
     for i = 1, 200 do
-        table.insert(stars, {x = love.math.random(0, screenW), y = love.math.random(0, love.graphics.getHeight()), speed = love.math.random(5, 20) / 10})
+        table.insert(stars, {x = love.math.random(0, screenW), y = love.math.random(0, screenH), speed = love.math.random(5, 20) / 10})
     end
 
     -- Start main menu music
@@ -90,9 +94,8 @@ function mainmenu.load()
 end
 
 function mainmenu.update(dt)
-    background.updateAnimationFrame(dt)
     background.update(dt)
-    
+
     if clickedButton then
         clickedTimer = clickedTimer - dt
         if clickedTimer <= 0 then
@@ -102,15 +105,7 @@ function mainmenu.update(dt)
 
     wiggleTimer = wiggleTimer + dt * 2
 
-    local mx, my = love.mouse.getPosition()
-    local cx, cy = love.graphics.getWidth() / 2, love.graphics.getHeight() / 2 + 150
-
-    cardTargetDX = (mx - cx) / 90
-    cardTargetDY = (my - cy) / 90
-
-    cardCurrentDX = cardCurrentDX + (cardTargetDX - cardCurrentDX) * 5 * dt
-    cardCurrentDY = cardCurrentDY + (cardTargetDY - cardCurrentDY) * 5 * dt
-
+    -- Update stars for background
     for _, star in ipairs(stars) do
         star.y = star.y + star.speed
         if star.y > love.graphics.getHeight() then
@@ -122,15 +117,19 @@ end
 
 function mainmenu.draw()
     effect(function()
-        background.draw({0.05, 0.05, 0.1}, 0, stars)
+        background.draw({0.02, 0.02, 0.05}, 0, stars) -- Darker cosmic background
         drawMenu()
     end)
 end
 
 function drawMenu()
-    love.graphics.setFont(gameFontLarge)
-    love.graphics.setColor(1, 1, 1)
-    love.graphics.printf("Spade Knight", 0, 80 + math.sin(wiggleTimer) * 5, love.graphics.getWidth(), "center")
+    local banner = love.graphics.newImage("source/Sprites/banner.png")
+    local bannerScale = 0.5 -- Adjust scale as needed
+    local bannerX = (love.graphics.getWidth() / 2) - (banner:getWidth() * bannerScale / 2) -- Centered at the top
+    local bannerY = 50 -- Banner at the top
+
+    love.graphics.setColor(1, 1, 1, 0.9) -- Adjusted transparency for the banner
+    love.graphics.draw(banner, bannerX, bannerY, 0, bannerScale, bannerScale)
 
     love.graphics.setFont(gameFont)
     local mx, my = love.mouse.getPosition()
@@ -141,11 +140,15 @@ function drawMenu()
         local color = normalColor
         local scale = 1
 
-        if isClicked then
-            color = {1, 1, 1}
-        elseif isHovered then
+        -- Hover feedback: Slightly scale up and change color
+        if isHovered then
+            scale = 1.05
             color = hoverColor
-            scale = 1.1 + math.sin(wiggleTimer * 2) * 0.02
+        end
+
+        -- Click feedback: Flash white briefly
+        if isClicked then
+            color = {1, 1, 1} -- White flash
         end
 
         love.graphics.setColor(0, 0, 0, 0.4)
@@ -158,12 +161,15 @@ function drawMenu()
         love.graphics.printf(button.text, button.x, button.y + (button.h / 4), button.w, "center")
     end
 
-    drawCard(mx, my)
+    drawCard() -- Draw the card in its static position
+
+    love.graphics.setColor(1, 1, 1, 0.7)
+    love.graphics.printf(version, love.graphics.getWidth() - 200, love.graphics.getHeight() - 40, 200, "right") -- Version on the right
 end
 
 function drawCard(mx, my)
-    local cx = love.graphics.getWidth() / 2
-    local cy = love.graphics.getHeight() / 2 + 150
+    local cx = love.graphics.getWidth() / 2 + 50 -- Shifted slightly to the right
+    local cy = love.graphics.getHeight() / 2 + 200 -- Main card lowered
 
     local wiggleX = math.sin(wiggleTimer) * 0.05
     local wiggleY = math.cos(wiggleTimer) * 0.05
@@ -182,6 +188,7 @@ function drawCard(mx, my)
     love.graphics.draw(currentCardImage, -cardWidth/2, -cardHeight/2, 0, cardWidth / currentCardImage:getWidth(), cardHeight / currentCardImage:getHeight())
     love.graphics.pop()
 end
+
 
 function mainmenu.mousepressed(x, y, button)
     if button == 1 then

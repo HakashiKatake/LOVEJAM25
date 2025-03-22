@@ -2,8 +2,6 @@ local utility = require 'modules.utility'
 
 local cardbehaviour = {}
 
--- This function now receives several parameters (by value for numbers)
--- and returns updated values.
 function cardbehaviour.checkCardBehaviour(boughtCards, possibleCards, playerSpeed, playerHealth, maxBoughtCards, worldGravity, amountCards, boss)
     -- Card effects:
     if utility.tableContains(boughtCards, "Antidote") then
@@ -51,6 +49,14 @@ function cardbehaviour.checkCardBehaviour(boughtCards, possibleCards, playerSpee
     else
         attackSpeed = 1
     end
+
+    if utility.tableContains(boughtCards, "Vampiric Strike") then
+        if boss then
+            boss.Durability = boss.Durability - boss.Durability * 0,15
+            attackSpeed = 0.4
+        end
+    end
+ 
 
     if utility.tableContains(boughtCards, "Time Warp") then
         if boss.Durability > 50 and playerHealth < 50 then

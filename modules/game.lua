@@ -502,6 +502,8 @@ function game.draw()
         elseif pausePopup then
             game.drawPausePopup()
         end
+
+        world:draw()
     end)
 
     love.graphics.setColor(1, 1, 1, 1)
@@ -789,7 +791,7 @@ end
 ----------------------------------------------------------------
 function game.beginFight()
     background.doDrawBg = true
-    background.drawEffects = false
+    back.drawEffects = false
     targetBgColor = { love.math.random(), love.math.random(), love.math.random() }
     spawner.spawnPlayer(world, playerX, playerY)
     spawner.spawnGround(world)
