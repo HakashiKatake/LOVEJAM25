@@ -11,6 +11,14 @@ local cardbehaviour = require 'modules.cardbehaviour'
 
 local game = {}
 
+-- SFX for card appearance and hover
+local cardThrowSfx = love.audio.newSource("source/SFX/cardthrow.wav", "static")
+local cardSelectSfx = love.audio.newSource("source/SFX/cardselect.wav", "static")
+
+-- Variables to track SFX for card appearance and hover
+local cardsSoundPlayed = false  -- global flag reset each time cards are drawn
+local lastHoveredCardIndex = nil
+
 -- Global game state variables
 local world
 local possibleCards = {}
@@ -37,7 +45,7 @@ local targetBgColor = {
 }
 local colorTransitionSpeed = 1
 
-local cardAnimations = {}
+local cardAnimations = {}   -- each entry will also get a .soundPlayed flag
 local hoverScale = 1.1
 local hoverSpeed = 10
 
@@ -162,6 +170,10 @@ function game.resetGameState()
     isAttacking = false
     playerAttackTimer = attackCooldown
 
+    -- Reset card SFX tracking variables
+    cardsSoundPlayed = false
+    lastHoveredCardIndex = nil
+
     world = wf.newWorld(0, worldGravity, true)
     background.doDrawBg = false
     background.drawEffects = true
@@ -211,6 +223,8 @@ function game.load()
     end
 
     card.drawCards(amountCards, possibleCards, chosenCards, cardAnimations, cardY)
+    cardsSoundPlayed = false
+    lastHoveredCardIndex = nil
     Poison = false
     TwoFaced = false
     winPopup = false
@@ -224,9 +238,9 @@ end
 function game.update(dt)
     world:update(dt)
 
-    -- If your background.lua has these functions, call them:
-    background.updateAnimationFrame(dt) -- optional if your background has animations
-    background.update(dt) -- optional if your background logic needs an update
+    -- If background has update functions, call them (if defined)
+    if background.updateAnimationFrame then background.updateAnimationFrame(dt) end
+    if background.update then background.update(dt) end
 
     if pausePopup or winPopup or losePopup then
         return
@@ -317,7 +331,22 @@ function game.update(dt)
         -- Call card behaviour logic from separate module
         playerSpeed, playerHealth, maxBoughtCards, worldGravity, amountCards =
             cardbehaviour.checkCardBehaviour(boughtCards, possibleCards, playerSpeed, playerHealth, maxBoughtCards, worldGravity, amountCards, boss)
+
+        -- For each card animation, if its elapsed time exceeds its delay and sound hasn't been played, play cardThrowSfx
+        for _, anim in ipairs(cardAnimations) do
+            if not anim.soundPlayed and anim.elapsed >= anim.delay then
+                cardThrowSfx:play()
+                anim.soundPlayed = true
+            end
+        end
     end
+
+    -- Hover sound: if hoveredCardIndex changes, play cardSelectSfx
+    local mx, my = love.mouse.getPosition()
+    if hoveredCardIndex and hoveredCardIndex ~= lastHoveredCardIndex then
+        cardSelectSfx:play()
+    end
+    lastHoveredCardIndex = hoveredCardIndex
 
     gradientTime = gradientTime + dt * 0.1
     for _, star in ipairs(stars) do
@@ -357,7 +386,6 @@ function game.update(dt)
         end
     end
 
-    local mx, my = love.mouse.getPosition()
     hoveredCardIndex = nil
     local startX = (800 - (amountCards * 120)) / 2
     for i, cardData in ipairs(chosenCards) do
@@ -404,7 +432,6 @@ end
 ----------------------------------------------------------------
 function game.draw()
     effect(function()
-        -- Draw the background from your background.lua
         background.draw(currentBgColor, gradientTime, stars)
         world:setQueryDebugDrawing(true)
 
@@ -475,7 +502,7 @@ function game.draw()
     end)
 
     love.graphics.setColor(1, 1, 1, 1)
-    -- If you want to see physics bodies, uncomment:
+    -- Uncomment to draw physics bodies:
     -- world:draw()
 end
 
@@ -587,7 +614,7 @@ function game.drawPausePopup()
         love.graphics.setColor(0, 0, 0, 0.5)
         love.graphics.rectangle("fill", drawX + 5, drawY + 5, drawW, drawH, 8, 8)
 
-        love.graphics.setColor(0.2, 0.6, 0.2)
+        love.graphics.setColor(0, 0, 0, 0.5)
         love.graphics.rectangle("fill", drawX, drawY, drawW, drawH, 8, 8)
         love.graphics.setColor(1, 1, 1)
         love.graphics.printf(btn.text, drawX, drawY + (drawH / 4), drawW, "center")

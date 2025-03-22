@@ -40,6 +40,25 @@ function cardbehaviour.checkCardBehaviour(boughtCards, possibleCards, playerSpee
         amountCards = 3
     end
 
+    if utility.tableContains(boughtCards, "Strength") or utility.tableContains(boughtCards, "RGB") then
+        attackDamage = 15
+    else
+        attackDamage = 20
+    end
+
+    if utility.tableContains(boughtCards, "Quickhand") or utility.tableContains(boughtCards, "RGB") then
+        attackSpeed = 3
+    else
+        attackSpeed = 1
+    end
+
+    if utility.tableContains(boughtCards, "Time Warp") then
+        if boss.Durability > 50 and playerHealth < 50 then
+            playerHealth = playerHealth + 20
+            utility.tableRemove(boughtCards, "Time Warp")
+        end 
+    end
+
     if utility.tableContains(boughtCards, "GL1T5H") then
         maxBoughtCards = 7
     else
