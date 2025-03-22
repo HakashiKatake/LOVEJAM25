@@ -22,6 +22,8 @@ local timer = 0
 local cardY = 400
 local gameFont
 local Money = 10
+background.doDrawBg = false
+background.drawEffects = true
 
 local gradientTime = 0
 local stars = {}
@@ -159,6 +161,8 @@ function game.resetGameState()
     playerAttackTimer = attackCooldown
 
     world = wf.newWorld(0, worldGravity, true)
+    background.doDrawBg = false
+    background.drawEffects = true
     world:addCollisionClass("Ground")
     world:addCollisionClass("PlayerTrigger")
     world:addCollisionClass("Boss")
@@ -217,6 +221,9 @@ end
 ----------------------------------------------------------------
 function game.update(dt)
     world:update(dt)
+
+    background.updateAnimationFrame(dt) -- Update animation state
+    background.update(dt) -- Update background logic
 
     if pausePopup or winPopup or losePopup then
         return
@@ -378,6 +385,8 @@ function game.update(dt)
             chosenCards = {}
             cardAnimations = {}
             game.beginFight()
+            background.doDrawBg = true
+            background.drawEffects = false
         end
     end
     playButton.scale = playButton.scale + (playButton.targetScale - playButton.scale) * 10 * dt
@@ -462,7 +471,7 @@ function game.draw()
     end)
 
     love.graphics.setColor(1, 1, 1, 1)
-    world:draw()
+    --world:draw()
 end
 
 ----------------------------------------------------------------
@@ -757,6 +766,8 @@ end
 -- Begin the fight
 ----------------------------------------------------------------
 function game.beginFight()
+    background.doDrawBg = true
+    background.drawEffects = false
     targetBgColor = { love.math.random(), love.math.random(), love.math.random() }
     spawner.spawnPlayer(world, playerX, playerY)
     spawner.spawnGround(world)
@@ -774,6 +785,8 @@ end
 ----------------------------------------------------------------
 function game.fightWin()
     winPopup = true
+    background.drawEffects = true
+    background.doDrawBg = false
 end
 
 return game

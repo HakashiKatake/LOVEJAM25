@@ -17,7 +17,7 @@ function card.getPossibleCards()
         {Name = "Lucky Draw", Description = "Randomly gain one positive effect", Price = 5, Sprite = love.graphics.newImage("Source/Sprites/Cards/lucky_draw.png")},
         {Name = "Haste", Description = "Gain the ability of Dashing", Price = 9, Sprite = love.graphics.newImage("Source/Sprites/Cards/haste.png")},
         {Name = "Time Warp", Description = "Get back 20 Health if Boss Health > 50 and Player Health < 50", Price = 12, Sprite = love.graphics.newImage("Source/Sprites/Cards/time_warp.png")},
-        {Name = "Shield Wall", Description = "Take 50% less damage for 10 seconds", Price = 10, Sprite = love.graphics.newImage("Source/Sprites/Cards/shield_wall.png")},
+        -- {Name = "Shield Wall", Description = "Take 50% less damage for 10 seconds", Price = 10, Sprite = love.graphics.newImage("Source/Sprites/Cards/shield_wall.png")},
         {Name = "Berserk", Description = "Double attack damage but take 25% more damage", Price = 8, Sprite = love.graphics.newImage("Source/Sprites/Cards/berserk.png")},
         {Name = "Mushroom", Description = "50% chance poisoning, 50% get more health", Price = 5, Sprite = love.graphics.newImage("Source/Sprites/Cards/mushroom.png")},
         {Name = "Fly like a Bunny", Description = "Boosted Jump Height", Price = 6, Sprite = love.graphics.newImage("Source/Sprites/Cards/fly_like_a_bunny.png")},
@@ -50,7 +50,7 @@ function card.drawCardsUI(chosenCards, cardAnimations, hoveredCardIndex, timer, 
     local startX = (800 - (#chosenCards * 120)) / 2  
     for i, cardData in ipairs(chosenCards) do
         local x = startX + (i - 1) * 120
-        local y = cardAnimations[i].currentY
+        local y = cardAnimations[i].currentY - 20
         local scale = cardAnimations[i].scale
         local alpha = cardAnimations[i].alpha
 
@@ -64,7 +64,7 @@ function card.drawCardsUI(chosenCards, cardAnimations, hoveredCardIndex, timer, 
             local spriteWidth = cardData.Sprite:getWidth()
             local spriteHeight = cardData.Sprite:getHeight()
             local scaleX = 100 / spriteWidth  
-            local scaleY = 140 / spriteHeight 
+            local scaleY = 180 / spriteHeight 
             love.graphics.setColor(1, 1, 1, alpha)
             love.graphics.draw(cardData.Sprite, 0, 0, 0, scaleX, scaleY)
         end
@@ -72,7 +72,7 @@ function card.drawCardsUI(chosenCards, cardAnimations, hoveredCardIndex, timer, 
         love.graphics.setColor(1, 1, 1, 1)
         local nameHeight = gameFont:getHeight() * math.ceil(gameFont:getWidth(cardData.Name) / 100)
         love.graphics.printf(cardData.Name, 0, - (nameHeight + 10), 100, "center")
-        love.graphics.printf("$" .. cardData.Price, 0, 150, 100, "center")
+        love.graphics.printf("$" .. cardData.Price, 0, 180, 100, "center")
         love.graphics.pop()
     end
 

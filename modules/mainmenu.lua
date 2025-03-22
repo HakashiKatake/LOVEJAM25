@@ -5,6 +5,8 @@ local background = require 'modules.background'
 local credits = require 'modules.credits'
 local utility = require 'modules.utility'
 
+background.doDrawBg = false
+
 local mainmenu = {}
 
 local buttons = {}
@@ -21,7 +23,7 @@ local clickedTimer, clickedButton = 0, nil
 
 local cardImage, currentCardImage
 local easterEggFiles = {}
-local cardWidth, cardHeight = 120, 170  -- Smaller card size
+local cardWidth, cardHeight = 120, 190
 
 local konamiSequence = {"up", "up", "down", "down", "left", "right", "left", "right", "b", "a"}
 local konamiIndex = 1
@@ -81,6 +83,9 @@ function mainmenu.load()
 end
 
 function mainmenu.update(dt)
+    background.updateAnimationFrame(dt) -- Update animation state
+    background.update(dt) -- Update background logic
+    
     if clickedButton then
         clickedTimer = clickedTimer - dt
         if clickedTimer <= 0 then

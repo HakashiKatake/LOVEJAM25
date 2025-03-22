@@ -1,4 +1,5 @@
 local credits = {}
+local game = require 'modules.game'
 local moonshine = require 'libraries.moonshine'
 local effect = moonshine(moonshine.effects.filmgrain)
     .chain(moonshine.effects.vignette)
@@ -10,7 +11,7 @@ effect.filmgrain.size = 3
 effect.scanlines.opacity = 0.2
 
 local text = {
-    "{Game Name}",
+    "Spade Knight",
     "a game made with love (literally).",
     "",
     "Developed by:",
@@ -60,6 +61,11 @@ function credits.draw()
             love.graphics.printf(line, 0, yOffset + (i - 1) * 40, love.graphics.getWidth(), "center")
         end
     end)
+end
+
+function credits.keypressed(key)
+    game.resetGameState()
+    currentState = "menu"
 end
 
 return credits
