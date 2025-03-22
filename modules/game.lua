@@ -22,6 +22,8 @@ local timer = 0
 local cardY = 400
 local gameFont
 local Money = 10
+
+-- Options for the background
 background.doDrawBg = false
 background.drawEffects = true
 
@@ -92,7 +94,7 @@ local maxBoughtCards = 5
 math.randomseed(os.time())
 
 -- Attack system
-local attackCooldown = 0.5
+local attackCooldown = 0.2
 local playerAttackTimer = attackCooldown
 local isAttacking = false  -- Track if we're currently attacking
 
@@ -222,8 +224,9 @@ end
 function game.update(dt)
     world:update(dt)
 
-    background.updateAnimationFrame(dt) -- Update animation state
-    background.update(dt) -- Update background logic
+    -- If your background.lua has these functions, call them:
+    background.updateAnimationFrame(dt) -- optional if your background has animations
+    background.update(dt) -- optional if your background logic needs an update
 
     if pausePopup or winPopup or losePopup then
         return
@@ -401,6 +404,7 @@ end
 ----------------------------------------------------------------
 function game.draw()
     effect(function()
+        -- Draw the background from your background.lua
         background.draw(currentBgColor, gradientTime, stars)
         world:setQueryDebugDrawing(true)
 
@@ -471,7 +475,8 @@ function game.draw()
     end)
 
     love.graphics.setColor(1, 1, 1, 1)
-    --world:draw()
+    -- If you want to see physics bodies, uncomment:
+    -- world:draw()
 end
 
 ----------------------------------------------------------------
@@ -746,8 +751,9 @@ function game.keypressed(key)
             if boss and player then
                 local bx, by = boss.collider:getPosition()
                 local px, py = player:getX(), player:getY()
+                -- Increased hit radius from 70 to 120
                 local dist = math.sqrt((px - bx)^2 + (py - by)^2)
-                if dist < 70 then
+                if dist < 120 then
                     boss:takeDamage(attackDamage + attackBonus)
                     print("Player melee attacked boss! Boss health: " .. boss.Durability)
                 end
