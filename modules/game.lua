@@ -11,12 +11,14 @@ local cardbehaviour = require 'modules.cardbehaviour'
 
 local game = {}
 
+-- Load fight music as a streaming source and set to loop
+local fightTheme = love.audio.newSource("source/Music/fight-theme.wav", "stream")
+fightTheme:setLooping(true)
+
 -- SFX for card appearance and hover
 local cardThrowSfx = love.audio.newSource("source/SFX/cardthrow.wav", "static")
 local cardSelectSfx = love.audio.newSource("source/SFX/cardselect.wav", "static")
-
--- Variables to track SFX for card appearance and hover
-local cardsSoundPlayed = false  -- global flag reset each time cards are drawn
+local cardsSoundPlayed = false
 local lastHoveredCardIndex = nil
 
 -- Global game state variables
@@ -45,7 +47,7 @@ local targetBgColor = {
 }
 local colorTransitionSpeed = 1
 
-local cardAnimations = {}   -- each entry will also get a .soundPlayed flag
+local cardAnimations = {}   -- each card anim will get a .soundPlayed flag
 local hoverScale = 1.1
 local hoverSpeed = 10
 
@@ -170,7 +172,7 @@ function game.resetGameState()
     isAttacking = false
     playerAttackTimer = attackCooldown
 
-    -- Reset card SFX tracking variables
+    -- Reset card SFX tracking
     cardsSoundPlayed = false
     lastHoveredCardIndex = nil
 
@@ -182,6 +184,9 @@ function game.resetGameState()
     world:addCollisionClass("Boss")
 
     card.drawCards(amountCards, possibleCards, chosenCards, cardAnimations, cardY)
+
+    -- Stop fight music if playing
+    fightTheme:stop()
 end
 
 ----------------------------------------------------------------
@@ -230,6 +235,9 @@ function game.load()
     winPopup = false
     losePopup = false
     pausePopup = false
+
+    -- Stop fight music (if any)
+    fightTheme:stop()
 end
 
 ----------------------------------------------------------------
@@ -238,7 +246,6 @@ end
 function game.update(dt)
     world:update(dt)
 
-    -- If background has update functions, call them (if defined)
     if background.updateAnimationFrame then background.updateAnimationFrame(dt) end
     if background.update then background.update(dt) end
 
@@ -253,7 +260,6 @@ function game.update(dt)
     if isSpawned then
         playerTrigger:setPosition(player:getX(), player:getY())
 
-        -- Simple ground check: if player's velocity is near 0 and near ground, allow jump
         if ground and player then
             local gx, gy = ground:getPosition()
             local vx, vy = player:getLinearVelocity()
@@ -277,7 +283,6 @@ function game.update(dt)
             end
         end
 
-        -- Choose animation: Attack > Jump > Run/Idle
         if isAttacking then
             spritesheets.currentAnim = spritesheets.attackAnim
         elseif isJumping then
@@ -328,11 +333,9 @@ function game.update(dt)
 
         world:setGravity(0, worldGravity)
 
-        -- Call card behaviour logic from separate module
         playerSpeed, playerHealth, maxBoughtCards, worldGravity, amountCards =
             cardbehaviour.checkCardBehaviour(boughtCards, possibleCards, playerSpeed, playerHealth, maxBoughtCards, worldGravity, amountCards, boss)
 
-        -- For each card animation, if its elapsed time exceeds its delay and sound hasn't been played, play cardThrowSfx
         for _, anim in ipairs(cardAnimations) do
             if not anim.soundPlayed and anim.elapsed >= anim.delay then
                 cardThrowSfx:play()
@@ -341,7 +344,6 @@ function game.update(dt)
         end
     end
 
-    -- Hover sound: if hoveredCardIndex changes, play cardSelectSfx
     local mx, my = love.mouse.getPosition()
     if hoveredCardIndex and hoveredCardIndex ~= lastHoveredCardIndex then
         cardSelectSfx:play()
@@ -418,6 +420,7 @@ function game.update(dt)
             game.beginFight()
             background.doDrawBg = true
             background.drawEffects = false
+            fightTheme:play() -- Start the fight music
         end
     end
     playButton.scale = playButton.scale + (playButton.targetScale - playButton.scale) * 10 * dt
@@ -502,8 +505,6 @@ function game.draw()
     end)
 
     love.graphics.setColor(1, 1, 1, 1)
-    -- Uncomment to draw physics bodies:
-    -- world:draw()
 end
 
 ----------------------------------------------------------------
@@ -778,7 +779,6 @@ function game.keypressed(key)
             if boss and player then
                 local bx, by = boss.collider:getPosition()
                 local px, py = player:getX(), player:getY()
-                -- Increased hit radius from 70 to 120
                 local dist = math.sqrt((px - bx)^2 + (py - by)^2)
                 if dist < 120 then
                     boss:takeDamage(attackDamage + attackBonus)
@@ -811,6 +811,9 @@ function game.beginFight()
     end
     isSpawned = true
     playButton.visible = false
+
+    -- Start fight music looping
+    fightTheme:play()
 end
 
 ----------------------------------------------------------------
@@ -820,6 +823,9 @@ function game.fightWin()
     winPopup = true
     background.drawEffects = true
     background.doDrawBg = false
+
+    -- Stop fight music when fight is over
+    fightTheme:stop()
 end
 
 return game
