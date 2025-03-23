@@ -24,21 +24,24 @@ local clickedTimer, clickedButton = 0, nil
 local cardImage, currentCardImage
 local easterEggFiles = {}
 local cardWidth, cardHeight = 120, 190
-local cardTargetDX, cardTargetDY = 0, 0
-local cardCurrentDX, cardCurrentDY = 0, 0
-local wiggleTimer = 0
 
 local konamiSequence = {"up", "up", "down", "down", "left", "right", "left", "right", "b", "a"}
 local konamiIndex = 1
 
+local cardTargetDX, cardTargetDY = 0, 0
+local cardCurrentDX, cardCurrentDY = 0, 0
 local wiggleTimer = 0
 local stars = {}
 
 local version = "v0.40-JamEdition"
 
--- Load main menu theme music as a streaming source and set it to loop
+-- Load main menu theme music as a streaming source and set to loop
 local mainTheme = love.audio.newSource("source/Music/maintheme.wav", "stream")
 mainTheme:setLooping(true)
+
+-- Load the button hover SFX (blipSelect)
+local buttonSelectSfx = love.audio.newSource("source/SFX/blipSelect.wav", "static")
+local lastHoveredButtonIndex = nil
 
 function mainmenu.load()
     love.window.setTitle("Spade Knight")
@@ -113,6 +116,20 @@ function mainmenu.update(dt)
             star.x = love.math.random(0, love.graphics.getWidth())
         end
     end
+
+    -- Check for hover over buttons and play SFX if needed
+    local mx, my = love.mouse.getPosition()
+    local hoveredIndex = nil
+    for i, btn in ipairs(buttons) do
+        if mx > btn.x and mx < btn.x + btn.w and my > btn.y and my < btn.y + btn.h then
+            hoveredIndex = i
+            break
+        end
+    end
+    if hoveredIndex and hoveredIndex ~= lastHoveredButtonIndex then
+        buttonSelectSfx:play()
+    end
+    lastHoveredButtonIndex = hoveredIndex
 end
 
 function mainmenu.draw()
@@ -164,31 +181,26 @@ function drawMenu()
     drawCard() -- Draw the card in its static position
 
     love.graphics.setColor(1, 1, 1, 0.7)
-    love.graphics.printf(version, love.graphics.getWidth() - 200, love.graphics.getHeight() - 40, 200, "right") -- Version on the right
+    love.graphics.printf(version, love.graphics.getWidth() - 200, love.graphics.getHeight() - 40, 200, "right")
 end
 
-function drawCard(mx, my)
-    local cx = love.graphics.getWidth() / 2 + 50 -- Shifted slightly to the right
-    local cy = love.graphics.getHeight() / 2 + 200 -- Main card lowered
+function drawCard()
+    local cx = love.graphics.getWidth() / 2
+    local cy = love.graphics.getHeight() / 2 + 150
 
     local wiggleX = math.sin(wiggleTimer) * 0.05
     local wiggleY = math.cos(wiggleTimer) * 0.05
 
-    local lift = math.sqrt(cardCurrentDX^2 + cardCurrentDY^2) * 30
-
     love.graphics.push()
-    love.graphics.translate(cx, cy - lift)
-    love.graphics.rotate(cardCurrentDX * 0.2 + wiggleX)
-    love.graphics.scale(1, 1 + cardCurrentDY * 0.05 + wiggleY)
-
+    love.graphics.translate(cx, cy)
+    love.graphics.rotate(wiggleX)
+    love.graphics.scale(1, 1 + wiggleY)
     love.graphics.setColor(0, 0, 0, 0.3)
-    love.graphics.rectangle("fill", -cardWidth/2, -cardHeight/2 + 8, cardWidth, cardHeight, 12, 12)
-
+    love.graphics.rectangle("fill", -cardWidth/2, -cardHeight/2, cardWidth, cardHeight, 12, 12)
     love.graphics.setColor(1, 1, 1)
     love.graphics.draw(currentCardImage, -cardWidth/2, -cardHeight/2, 0, cardWidth / currentCardImage:getWidth(), cardHeight / currentCardImage:getHeight())
     love.graphics.pop()
 end
-
 
 function mainmenu.mousepressed(x, y, button)
     if button == 1 then

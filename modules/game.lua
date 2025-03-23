@@ -15,9 +15,15 @@ local game = {}
 local fightTheme = love.audio.newSource("source/Music/fight-theme.wav", "stream")
 fightTheme:setLooping(true)
 
+-- Load main menu music as a streaming source and set to loop
+local mainTheme = love.audio.newSource("source/Music/maintheme.wav", "stream")
+mainTheme:setLooping(true)
+
 -- SFX for card appearance and hover
 local cardThrowSfx = love.audio.newSource("source/SFX/cardthrow.wav", "static")
 local cardSelectSfx = love.audio.newSource("source/SFX/cardselect.wav", "static")
+-- SFX for when player is hurt (if needed elsewhere)
+local hitHurtSfx = love.audio.newSource("source/SFX/hitHurt.wav", "static")
 local cardsSoundPlayed = false
 local lastHoveredCardIndex = nil
 
@@ -41,13 +47,13 @@ local gradientTime = 0
 local stars = {}
 local currentBgColor = {0.05, 0.05, 0.1}
 local targetBgColor = {
-    math.random(1, 255)/255,
-    math.random(1, 255)/255,
-    math.random(1, 255)/255
+    math.random(1, 255) / 255,
+    math.random(1, 255) / 255,
+    math.random(1, 255) / 255
 }
 local colorTransitionSpeed = 1
 
-local cardAnimations = {}   -- each card anim will get a .soundPlayed flag
+local cardAnimations = {}   -- each card animation will also get a .soundPlayed flag
 local hoverScale = 1.1
 local hoverSpeed = 10
 
@@ -126,6 +132,12 @@ local pauseButtons = {
     mainmenu = { x = 300, y = 320, w = 200, h = 50, text = "Main Menu" }
 }
 
+-- For screen shake effect during boss quake mode
+local screenShakeIntensity = 0
+
+-- We'll track previous player health to detect damage
+local prevPlayerHealth = playerHealth
+
 ----------------------------------------------------------------
 -- Reset the entire game state
 ----------------------------------------------------------------
@@ -141,9 +153,9 @@ function game.resetGameState()
     gradientTime = 0
     currentBgColor = {0.05, 0.05, 0.1}
     targetBgColor = {
-        math.random(1,255)/255,
-        math.random(1,255)/255,
-        math.random(1,255)/255
+        math.random(1, 255) / 255,
+        math.random(1, 255) / 255,
+        math.random(1, 255) / 255
     }
     cardAnimations = {}
     removedCardIndex = nil
@@ -159,6 +171,7 @@ function game.resetGameState()
     ground = nil
     boss = nil
     playerHealth = 100
+    prevPlayerHealth = 100
     Poison = false
     TwoFaced = false
     worldGravity = 800
@@ -185,8 +198,9 @@ function game.resetGameState()
 
     card.drawCards(amountCards, possibleCards, chosenCards, cardAnimations, cardY)
 
-    -- Stop fight music if playing
+    -- Stop fight music if playing and start main menu theme
     fightTheme:stop()
+    mainTheme:play()
 end
 
 ----------------------------------------------------------------
@@ -236,8 +250,10 @@ function game.load()
     losePopup = false
     pausePopup = false
 
-    -- Stop fight music (if any)
     fightTheme:stop()
+    mainTheme:play()
+
+    prevPlayerHealth = playerHealth
 end
 
 ----------------------------------------------------------------
@@ -342,6 +358,12 @@ function game.update(dt)
                 anim.soundPlayed = true
             end
         end
+
+        -- Check if player's health decreased since last frame and play hurt SFX
+        if playerHealth < prevPlayerHealth then
+            hitHurtSfx:play()
+        end
+        prevPlayerHealth = playerHealth
     end
 
     local mx, my = love.mouse.getPosition()
@@ -420,6 +442,7 @@ function game.update(dt)
             game.beginFight()
             background.doDrawBg = true
             background.drawEffects = false
+            mainTheme:stop()
             fightTheme:play() -- Start the fight music
         end
     end
@@ -427,6 +450,13 @@ function game.update(dt)
 
     if boss and player then
         boss:update(dt, player)
+        -- For brute mode, if the boss is in quake mode, set screen shake intensity
+        if boss.Type == "brute" and boss.quakeActive then
+            -- Adjust intensity as desired (e.g., 10 pixels)
+            screenShakeIntensity = 10
+        else
+            screenShakeIntensity = 0
+        end
     end
 end
 
@@ -435,6 +465,14 @@ end
 ----------------------------------------------------------------
 function game.draw()
     effect(function()
+        -- Apply screen shake if needed
+        love.graphics.push()
+        if screenShakeIntensity > 0 then
+            local shakeX = love.math.random(-screenShakeIntensity, screenShakeIntensity)
+            local shakeY = love.math.random(-screenShakeIntensity, screenShakeIntensity)
+            love.graphics.translate(shakeX, shakeY)
+        end
+
         background.draw(currentBgColor, gradientTime, stars)
         world:setQueryDebugDrawing(true)
 
@@ -504,6 +542,7 @@ function game.draw()
         end
 
         world:draw()
+        love.graphics.pop() -- End screen shake transform
     end)
 
     love.graphics.setColor(1, 1, 1, 1)
@@ -775,8 +814,23 @@ function game.keypressed(key)
         end
     elseif key == 'z' then
         -- Melee attack: if not attacking and cooldown met
+        if (not isAttacking) and (playerAttackTimer >= attackCooldown) then
+            isAttacking = true
+            playerAttackTimer = 0
+            spritesheets.currentAnim = spritesheets.attackAnim
+            spritesheets.attackAnim:gotoFrame(1)
+            spritesheets.attackAnim:resume()
         
-        attack()
+            if boss and player then
+                local bx, by = boss.collider:getPosition()
+                local px, py = player:getX(), player:getY()
+                local dist = math.sqrt((px - bx)^2 + (py - by)^2)
+                if dist < 120 then
+                    boss:takeDamage(attackDamage + attackBonus)
+                    print("Player melee attacked boss! Boss health: " .. boss.Durability)
+                end
+            end
+        end
     elseif key == '1' then
         Money = Money + 10
     elseif key == '2' then
@@ -791,7 +845,7 @@ end
 ----------------------------------------------------------------
 function game.beginFight()
     background.doDrawBg = true
-    back.drawEffects = false
+    background.drawEffects = false  -- FIX: use 'background' not 'back'
     targetBgColor = { love.math.random(), love.math.random(), love.math.random() }
     spawner.spawnPlayer(world, playerX, playerY)
     spawner.spawnGround(world)
@@ -803,7 +857,7 @@ function game.beginFight()
     isSpawned = true
     playButton.visible = false
 
-    -- Start fight music looping
+    mainTheme:stop()
     fightTheme:play()
 end
 
@@ -814,8 +868,13 @@ function game.fightWin()
     winPopup = true
     background.drawEffects = true
     background.doDrawBg = false
+    fightTheme:stop()
+    mainTheme:play()
 end
 
+----------------------------------------------------------------
+-- Simple attack function for player (triggered in mousepressed)
+----------------------------------------------------------------
 function attack()
     if (not isAttacking) and (playerAttackTimer >= attackCooldown) then
         isAttacking = true
@@ -827,10 +886,9 @@ function attack()
         if boss and player then
             local bx, by = boss.collider:getPosition()
             local px, py = player:getX(), player:getY()
-            -- Increased hit radius from 70 to 120
             local dist = math.sqrt((px - bx)^2 + (py - by)^2)
             if dist < 120 then
-            boss:takeDamage(attackDamage + attackBonus)
+                boss:takeDamage(attackDamage + attackBonus)
                 print("Player melee attacked boss! Boss health: " .. boss.Durability)
             end
         end
