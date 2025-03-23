@@ -44,7 +44,7 @@ local buttonSelectSfx = love.audio.newSource("source/SFX/blipSelect.wav", "stati
 local lastHoveredButtonIndex = nil
 
 function mainmenu.load()
-    love.window.setTitle("Spade Knight")
+    love.window.setTitle("Knight Spade")
 
     gameFont = love.graphics.newFont("source/fonts/Jersey10.ttf", 28)
     gameFontLarge = love.graphics.newFont("source/fonts/Jersey10.ttf", 72)

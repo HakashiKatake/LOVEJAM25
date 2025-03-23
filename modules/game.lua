@@ -209,7 +209,7 @@ end
 -- Load
 ----------------------------------------------------------------
 function game.load()
-    love.window.setTitle("Spade Knight")
+    love.window.setTitle("Knight Spade")
     world = wf.newWorld(0, worldGravity, true)
     world:addCollisionClass("Ground")
     world:addCollisionClass("PlayerTrigger")

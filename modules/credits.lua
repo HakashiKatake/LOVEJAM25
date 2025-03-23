@@ -11,7 +11,7 @@ effect.filmgrain.size = 3
 effect.scanlines.opacity = 0.2
 
 local text = {
-    "Spade Knight",
+    "Knight Spade",
     "a game made with love (literally).",
     "",
     "Developed by:",
