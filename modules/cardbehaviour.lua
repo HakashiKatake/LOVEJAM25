@@ -38,6 +38,12 @@ function cardbehaviour.checkCardBehaviour(boughtCards, possibleCards, playerSpee
         amountCards = 3
     end
 
+    if utility.tableContains(boughtCards, "Haste") then
+        canDash = true
+    else
+        canDash = false
+    end
+
     if utility.tableContains(boughtCards, "Strength") or utility.tableContains(boughtCards, "RGB") then
         attackDamage = 15
     else
@@ -49,15 +55,7 @@ function cardbehaviour.checkCardBehaviour(boughtCards, possibleCards, playerSpee
     else
         attackSpeed = 1
     end
-
-    if utility.tableContains(boughtCards, "Vampiric Strike") then
-        if boss then
-            boss.Durability = boss.Durability - boss.Durability * 0,15
-            attackSpeed = 0.4
-        end
-    end
  
-
     if utility.tableContains(boughtCards, "Time Warp") then
         if boss.Durability > 50 and playerHealth < 50 then
             playerHealth = playerHealth + 20

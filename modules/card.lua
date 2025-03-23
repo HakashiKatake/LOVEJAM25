@@ -12,7 +12,7 @@ function card.getPossibleCards()
         {Name = "UNO Reverse", Description = "Apply current effect to the boss (lasts 10-20 seconds)", Price = 6, Sprite = love.graphics.newImage("Source/Sprites/Cards/uno_reverse.png")},
         {Name = "Thorns", Description = "Reflects a portion of damage taken", Price = 8, Sprite = love.graphics.newImage("Source/Sprites/Cards/thorns.png")},
         {Name = "Vampiric Strike", Description = "Steal health equal to 15% of in return of lower attack damage", Price = 8, Sprite = love.graphics.newImage("Source/Sprites/Cards/vampiric_strike.png")},
-        {Name = "Phase Shift", Description = "Temporary invincibility (3-5 seconds)", Price = 9, Sprite = love.graphics.newImage("Source/Sprites/Cards/phase_shift.png")},
+        --{Name = "Phase Shift", Description = "Temporary invincibility (3-5 seconds)", Price = 9, Sprite = love.graphics.newImage("Source/Sprites/Cards/phase_shift.png")},
         {Name = "Second Wind", Description = "Revive with 50% health after dying, lose all the cards you have", Price = 16, Sprite = love.graphics.newImage("Source/Sprites/Cards/second_wind.png")},
         {Name = "Lucky Draw", Description = "Randomly gain one positive effect", Price = 5, Sprite = love.graphics.newImage("Source/Sprites/Cards/lucky_draw.png")},
         {Name = "Haste", Description = "Gain the ability of Dashing", Price = 9, Sprite = love.graphics.newImage("Source/Sprites/Cards/haste.png")},
@@ -22,7 +22,8 @@ function card.getPossibleCards()
         {Name = "Mushroom", Description = "50% chance poisoning, 50% get more health", Price = 5, Sprite = love.graphics.newImage("Source/Sprites/Cards/mushroom.png")},
         {Name = "Fly like a Bunny", Description = "Boosted Jump Height", Price = 6, Sprite = love.graphics.newImage("Source/Sprites/Cards/fly_like_a_bunny.png")},
         {Name = "GL1T5H", Description = "???", Price = 20, Sprite = love.graphics.newImage("Source/Sprites/Cards/glitch.png")}, 
-        {Name = "BUY BUY BUY", Description = "Get 2 more additional cards in the shop", Price = 15, Sprite = love.graphics.newImage("Source/Sprites/Cards/bbb.png")}
+        {Name = "BUY BUY BUY", Description = "Get 2 more additional cards in the shop", Price = 15, Sprite = love.graphics.newImage("Source/Sprites/Cards/bbb.png")},
+        {Name = "Sheild", Description = "+20 Health", Price = 10, Sprite = love.graphics.newImage("Source/Sprites/Cards/shield.png")}
     }
 end
 

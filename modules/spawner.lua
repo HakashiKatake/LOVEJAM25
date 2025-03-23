@@ -3,12 +3,12 @@ local Boss = require("modules.boss")
 
 function spawner.spawnGround(world)
     -- Ground collider
-    ground = world:newRectangleCollider(0, 550, 800, 50)
+    ground = world:newRectangleCollider(0, 550, 8000, 50)
     ground:setType('static')
     ground:setCollisionClass('Ground')
 
     -- Roof collider
-    roof = world:newRectangleCollider(0, 0, 800, 10)
+    roof = world:newRectangleCollider(0, 0, 8000, 10)
     roof:setType('static')
     roof:setCollisionClass('Ground')
 

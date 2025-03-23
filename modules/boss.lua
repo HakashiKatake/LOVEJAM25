@@ -1,4 +1,5 @@
 local Boss = {}
+local utility = require 'modules.utility'
 Boss.__index = Boss
 
 local anim8 = require 'libraries.anim8'

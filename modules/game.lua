@@ -191,6 +191,8 @@ function game.resetGameState()
     cardsSoundPlayed = false
     lastHoveredButton = nil
 
+    difficulty = 1
+
     world = wf.newWorld(0, worldGravity, true)
     background.doDrawBg = false
     background.drawEffects = true
@@ -559,7 +561,7 @@ function game.draw()
             game.drawPausePopup()
         end
 
-        world:draw()
+        -- world:draw()
         love.graphics.pop()
     end)
 
