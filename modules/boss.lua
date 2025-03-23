@@ -49,6 +49,14 @@ local frameHeightQuake = quakeImage:getHeight()
 local gridQuake = anim8.newGrid(frameWidthQuake, frameHeightQuake, quakeImage:getWidth(), quakeImage:getHeight())
 local quakeAnim = anim8.newAnimation(gridQuake('1-' .. numQuakeFrames, 1), 0.15)
 
+-- New: Boss rock throw animation (for switcher mode)
+local bossRockThrowImage = love.graphics.newImage("source/Sprites/Boss/Attack/bossrockthrow-Sheet.png")
+local numRockThrowFrames = 3  -- adjust according to your spritesheet
+local frameWidthRockThrow = bossRockThrowImage:getWidth() / numRockThrowFrames
+local frameHeightRockThrow = bossRockThrowImage:getHeight()
+local gridRockThrow = anim8.newGrid(frameWidthRockThrow, frameHeightRockThrow, bossRockThrowImage:getWidth(), bossRockThrowImage:getHeight())
+local rockThrowAnim = anim8.newAnimation(gridRockThrow('1-' .. numRockThrowFrames, 1), 0.15, "pauseAtEnd")
+
 --------------------------------------------------
 -- 2) LOAD SOUND EFFECTS
 --------------------------------------------------
@@ -65,12 +73,12 @@ local howlIntervalMax = 20
 function Boss:new(world, x, y, settings)
     local instance = setmetatable({}, Boss)
     instance.world = world
-    -- Create collider: offset down 20px and height 80px to remove head collider
+    -- Create collider offset down 20px with height 80px (removing head collider)
     instance.collider = world:newRectangleCollider(x, y + 20, 100, 80)
     instance.collider:setType("dynamic")
     instance.collider:setCollisionClass("Boss")
     
-    -- Prevent boss from spinning and flying
+    -- Prevent spinning and flying
     instance.collider:setFixedRotation(true)
     instance.collider:setMass(1000)
     instance.collider:setLinearDamping(5)
@@ -91,14 +99,14 @@ function Boss:new(world, x, y, settings)
     instance.bullets        = {}
     instance.rocks          = {}
     
-    -- Boss facing: 1 for right, -1 for left
     instance.bossFlipX = 1
     
-    -- Clone animations for this boss instance
-    instance.walkAnim   = walkAnim:clone()
-    instance.idleAnim   = idleAnim:clone()
-    instance.attackAnim = attackAnim:clone()
-    instance.quakeAnim  = quakeAnim:clone()
+    -- Clone animations for this instance
+    instance.walkAnim       = walkAnim:clone()
+    instance.idleAnim       = idleAnim:clone()
+    instance.attackAnim     = attackAnim:clone()
+    instance.quakeAnim      = quakeAnim:clone()
+    instance.rockThrowAnim  = rockThrowAnim:clone()
     
     -- Quake mode variables (for brute type)
     instance.quakeActive   = false
@@ -107,13 +115,16 @@ function Boss:new(world, x, y, settings)
     instance.quakeDuration = 2
     instance.quakeTimeLeft = 0
     
-    -- Howling: set next howl time
+    -- Howling: schedule next howl time
     instance.nextHowlTime = love.timer.getTime() + math.random(howlIntervalMin, howlIntervalMax)
     
     -- Melee attack state (for switcher)
     instance.isAttacking    = false
-    instance.attackDuration = 0.3  -- about 3 frames * 0.1 each
+    instance.attackDuration = 0.3
     instance.attackElapsed  = 0
+    
+    -- New flag for rock-throw animation in switcher mode
+    instance.isRockThrowing = false
     
     return instance
 end
@@ -131,7 +142,7 @@ function Boss:update(dt, player)
         self.nextHowlTime = currentTime + math.random(howlIntervalMin, howlIntervalMax)
     end
 
-    -- Update facing based on player's position
+    -- Update boss facing based on player's position
     local bx, by = self.collider:getPosition()
     local px, py = player:getX(), player:getY()
     self.bossFlipX = (px < bx) and -1 or 1
@@ -148,7 +159,7 @@ function Boss:update(dt, player)
         end
     end
 
-    -- Type-specific logic
+    -- For switcher type, handle rock throw animation if active
     if self.Type == "switcher" then
         self:handleSwitcher(dt, player)
     elseif self.Type == "brute" then
@@ -174,6 +185,17 @@ function Boss:handleSwitcher(dt, player)
         return
     end
 
+    if self.isRockThrowing then
+        -- Update the rock throw animation until finished, then spawn bullet
+        self.rockThrowAnim:update(dt)
+        if self.rockThrowAnim.position == #self.rockThrowAnim.frames then
+            self:spawnBullet(player)
+            self.isRockThrowing = false
+        end
+        self.state = "attack"
+        return
+    end
+
     if distance < 40 then
         self:startMeleeAttack(player)
         self.state = "attack"
@@ -184,7 +206,10 @@ function Boss:handleSwitcher(dt, player)
     else
         if self.attackTimer >= self.AttackInterval then
             self.attackTimer = 0
-            self:spawnBullet(player)
+            -- Instead of immediately spawning bullet, start the rock-throw animation
+            self.isRockThrowing = true
+            self.rockThrowAnim:gotoFrame(1)
+            self.rockThrowAnim:resume()
             self.state = "attack"
         else
             self.state = "idle"
@@ -223,7 +248,6 @@ function Boss:spawnBullet(player)
         dirY = dy,
         hit = false
     }
-    -- Assign the rock hit animation to this bullet; it will be used when it hits the player.
     bullet.rockAnim = rockAnim:clone()
     bullet.rockAnim:gotoFrame(1)
     bullet.rockAnim:pause()
@@ -416,9 +440,16 @@ function Boss:draw()
         imageToDraw = bossWalkImage
         fw, fh      = frameWidthWalk, frameHeightWalk
     elseif self.state == "attack" then
-        animToDraw  = self.attackAnim
-        imageToDraw = bossAttackImage
-        fw, fh      = frameWidthAttack, frameHeightAttack
+        -- In switcher mode, if not melee then use rock throw anim during bullet attack
+        if self.isRockThrowing then
+            animToDraw  = self.rockThrowAnim
+            imageToDraw = bossRockThrowImage
+            fw, fh      = frameWidthRockThrow, frameHeightRockThrow
+        else
+            animToDraw  = self.attackAnim
+            imageToDraw = bossAttackImage
+            fw, fh      = frameWidthAttack, frameHeightAttack
+        end
     else
         animToDraw  = self.idleAnim
         imageToDraw = bossIdleImage
@@ -460,11 +491,11 @@ function Boss:draw()
         end
     end
 
-    -- Draw boss health bar at the top-center
-    local screenWidth = love.graphics.getWidth()
-    local healthBarWidth = 300
+    -- Draw boss health bar (top-center)
+    local screenWidth     = love.graphics.getWidth()
+    local healthBarWidth  = 300
     local healthBarHeight = 25
-    local healthPerc = math.max(self.Durability / self.MaxDurability, 0)
+    local healthPerc      = math.max(self.Durability / self.MaxDurability, 0)
     
     local rColor = math.min(2 * (1 - healthPerc), 1)
     local gColor = math.min(2 * healthPerc, 1)

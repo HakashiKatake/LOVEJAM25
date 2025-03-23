@@ -105,7 +105,7 @@ local dashTimer = 0
 local dashCooldownTimer = 0 
 local dashUsage = 0
 
-local canDash = false 
+canDash = false 
 
 playerFlipX = 2
 
@@ -225,7 +225,7 @@ end
 -- Load
 ----------------------------------------------------------------
 function game.load()
-    love.window.setTitle("Spade Knight")
+    love.window.setTitle("Knight Spade")
     world = wf.newWorld(0, worldGravity, true)
     world:addCollisionClass("Ground")
     world:addCollisionClass("PlayerTrigger")
