@@ -34,7 +34,7 @@ local cardCurrentDX, cardCurrentDY = 0, 0
 local wiggleTimer = 0
 local stars = {}
 
-local version = "v0.51-JamEdition"
+local version = "v0.56-JamEdition"
 
 -- Load main menu theme music as a streaming source and set to loop
 local mainTheme = love.audio.newSource("source/Music/maintheme.wav", "stream")
