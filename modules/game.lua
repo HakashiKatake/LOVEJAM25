@@ -22,10 +22,12 @@ mainTheme:setLooping(true)
 -- SFX for card appearance and hover
 local cardThrowSfx = love.audio.newSource("source/SFX/cardthrow.wav", "static")
 local cardSelectSfx = love.audio.newSource("source/SFX/cardselect.wav", "static")
--- SFX for when player is hurt (if needed elsewhere)
+-- New SFX for button hover: blipSelect
+local blipSelectSfx = love.audio.newSource("source/SFX/blipSelect.wav", "static")
+-- SFX for when player is hurt
 local hitHurtSfx = love.audio.newSource("source/SFX/hitHurt.wav", "static")
 local cardsSoundPlayed = false
-local lastHoveredCardIndex = nil
+local lastHoveredButton = nil  -- Track last hovered button (for popups and play button)
 
 -- Global game state variables
 local world
@@ -53,7 +55,7 @@ local targetBgColor = {
 }
 local colorTransitionSpeed = 1
 
-local cardAnimations = {}   -- each card animation will also get a .soundPlayed flag
+local cardAnimations = {}   -- each card anim will also get a .soundPlayed flag
 local hoverScale = 1.1
 local hoverSpeed = 10
 
@@ -135,7 +137,7 @@ local pauseButtons = {
 -- For screen shake effect during boss quake mode
 local screenShakeIntensity = 0
 
--- We'll track previous player health to detect damage
+-- Track previous player health to detect damage
 local prevPlayerHealth = playerHealth
 
 ----------------------------------------------------------------
@@ -187,7 +189,7 @@ function game.resetGameState()
 
     -- Reset card SFX tracking
     cardsSoundPlayed = false
-    lastHoveredCardIndex = nil
+    lastHoveredButton = nil
 
     world = wf.newWorld(0, worldGravity, true)
     background.doDrawBg = false
@@ -198,7 +200,7 @@ function game.resetGameState()
 
     card.drawCards(amountCards, possibleCards, chosenCards, cardAnimations, cardY)
 
-    -- Stop fight music if playing and start main menu theme
+    -- Stop fight music if playing and start main menu music
     fightTheme:stop()
     mainTheme:play()
 end
@@ -243,7 +245,7 @@ function game.load()
 
     card.drawCards(amountCards, possibleCards, chosenCards, cardAnimations, cardY)
     cardsSoundPlayed = false
-    lastHoveredCardIndex = nil
+    lastHoveredButton = nil
     Poison = false
     TwoFaced = false
     winPopup = false
@@ -266,6 +268,25 @@ function game.update(dt)
     if background.update then background.update(dt) end
 
     if pausePopup or winPopup or losePopup then
+        -- Check hovered button for popups and play hover SFX
+        local hoveredBtn = nil
+        local btnTables = {}
+        if pausePopup then btnTables = pauseButtons
+        elseif winPopup then btnTables = winButtons
+        elseif losePopup then btnTables = loseButtons end
+        for key, btn in pairs(btnTables) do
+            local mx, my = love.mouse.getPosition()
+            if mx > btn.x and mx < btn.x + btn.w and my > btn.y and my < btn.y + btn.h then
+                hoveredBtn = btn
+                break
+            end
+        end
+        if hoveredBtn and hoveredBtn ~= lastHoveredButton then
+            love.audio.play(blipSelectSfx)
+            lastHoveredButton = hoveredBtn
+        elseif not hoveredBtn then
+            lastHoveredButton = nil
+        end
         return
     end
 
@@ -359,7 +380,6 @@ function game.update(dt)
             end
         end
 
-        -- Check if player's health decreased since last frame and play hurt SFX
         if playerHealth < prevPlayerHealth then
             hitHurtSfx:play()
         end
@@ -367,10 +387,11 @@ function game.update(dt)
     end
 
     local mx, my = love.mouse.getPosition()
-    if hoveredCardIndex and hoveredCardIndex ~= lastHoveredCardIndex then
+    -- Check hover for card buttons (if any) to play cardSelectSfx
+    if hoveredCardIndex and hoveredCardIndex ~= lastHoveredButton then
         cardSelectSfx:play()
     end
-    lastHoveredCardIndex = hoveredCardIndex
+    lastHoveredButton = hoveredCardIndex
 
     gradientTime = gradientTime + dt * 0.1
     for _, star in ipairs(stars) do
@@ -443,16 +464,14 @@ function game.update(dt)
             background.doDrawBg = true
             background.drawEffects = false
             mainTheme:stop()
-            fightTheme:play() -- Start the fight music
+            fightTheme:play() -- Start fight music
         end
     end
     playButton.scale = playButton.scale + (playButton.targetScale - playButton.scale) * 10 * dt
 
     if boss and player then
         boss:update(dt, player)
-        -- For brute mode, if the boss is in quake mode, set screen shake intensity
         if boss.Type == "brute" and boss.quakeActive then
-            -- Adjust intensity as desired (e.g., 10 pixels)
             screenShakeIntensity = 10
         else
             screenShakeIntensity = 0
@@ -465,7 +484,6 @@ end
 ----------------------------------------------------------------
 function game.draw()
     effect(function()
-        -- Apply screen shake if needed
         love.graphics.push()
         if screenShakeIntensity > 0 then
             local shakeX = love.math.random(-screenShakeIntensity, screenShakeIntensity)
@@ -542,7 +560,7 @@ function game.draw()
         end
 
         world:draw()
-        love.graphics.pop() -- End screen shake transform
+        love.graphics.pop()
     end)
 
     love.graphics.setColor(1, 1, 1, 1)
@@ -802,7 +820,6 @@ function game.keypressed(key)
     elseif key == '=' then
         playerHealth = playerHealth - 10
     elseif key == 'space' then
-        -- Jump: if can jump and not already jumping or attacking
         if canJump and not isJumping and not isAttacking then
             local vx, vy = player:getLinearVelocity()
             if math.abs(vy) < 0.1 then
@@ -813,7 +830,6 @@ function game.keypressed(key)
             end
         end
     elseif key == 'z' then
-        -- Melee attack: if not attacking and cooldown met
         if (not isAttacking) and (playerAttackTimer >= attackCooldown) then
             isAttacking = true
             playerAttackTimer = 0
@@ -858,7 +874,7 @@ function game.beginFight()
     playButton.visible = false
 
     mainTheme:stop()
-    fightTheme:play()
+    fightTheme:play() -- Start the fight music
 end
 
 ----------------------------------------------------------------
