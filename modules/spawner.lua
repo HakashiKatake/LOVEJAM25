@@ -12,12 +12,12 @@ function spawner.spawnGround(world)
     roof:setType('static')
     roof:setCollisionClass('Ground')
 
-    -- Left wall collider
+    -- Left wall
     wallLeft = world:newRectangleCollider(0, 0, 10, 600)
     wallLeft:setType('static')
     wallLeft:setCollisionClass('Ground')
 
-    -- Right wall collider
+    -- Right wall
     wallRight = world:newRectangleCollider(790, 0, 10, 600)
     wallRight:setType('static')
     wallRight:setCollisionClass('Ground')
@@ -33,27 +33,22 @@ function spawner.spawnPlayer(world, playerX, playerY)
 end
 
 function spawner.spawnBoss(world)
-    -- Example difficulty-based random logic:
-    -- 1) Random Type
-    -- 2) AttackDamage & Durability scale with difficulty
-    -- 3) Possibly random AttackInterval & Speed
-
     local bossTypes = {"switcher", "brute"}
     local chosenType = bossTypes[math.random(#bossTypes)]
 
-    -- Scale AttackDamage with difficulty, plus random range
-    local randomAttackDamage = 10 * difficulty + math.random(0, 10)  
-    -- Scale Durability with difficulty
+    -- Scale AttackDamage with difficulty + random
+    local randomAttackDamage = 10 * difficulty + math.random(0, 10)
+    -- Scale Durability with difficulty + random
     local randomDurability   = 200 * difficulty + math.random(0, 50)
 
-    -- Maybe random AttackInterval & Speed within some range
-    local randomInterval = math.random(1, 3) / difficulty  
+    -- Maybe random AttackInterval & Speed
+    local randomInterval = math.random(1, 3) / difficulty
     local randomSpeed    = 80 + math.random(0, 40) * difficulty
 
     boss = Boss:new(world, 500, 300, {
         Type           = chosenType,
         Difficulty     = difficulty,
-        AttackSpeed    = 0.2,  -- or scale with difficulty if you want
+        AttackSpeed    = 0.2,
         AttackDamage   = randomAttackDamage,
         AttackInterval = randomInterval,
         Durability     = randomDurability,

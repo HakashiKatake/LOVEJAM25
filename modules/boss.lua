@@ -3,12 +3,12 @@ Boss.__index = Boss
 
 local anim8 = require 'libraries.anim8'
 
--- Load sprites and animations
+--------------------------------------------------
+-- 1) LOAD ALL SPRITES AND ANIMATIONS
+--------------------------------------------------
 
--- Default rock sprite (for non-hit rocks)
+-- Rock: default sprite and hit animation
 local rockSprite = love.graphics.newImage("source/Sprites/Boss/Attack/rock001.png")
-
--- Rock hit animation spritesheet (4 frames)
 local rockAnimImage = love.graphics.newImage("source/Sprites/Boss/Attack/rock_anim.png")
 local numRockFrames = 4
 local frameWidthRock = rockAnimImage:getWidth() / numRockFrames
@@ -16,7 +16,7 @@ local frameHeightRock = rockAnimImage:getHeight()
 local gridRockAnim = anim8.newGrid(frameWidthRock, frameHeightRock, rockAnimImage:getWidth(), rockAnimImage:getHeight())
 local rockAnim = anim8.newAnimation(gridRockAnim('1-' .. numRockFrames, 1), 0.1, "pauseAtEnd")
 
--- Boss walking spritesheet and walk animation
+-- Boss walking animation
 local bossWalkImage = love.graphics.newImage("source/Sprites/Boss/Walk/boss_walk_def.png")
 local numWalkFrames = 4
 local frameWidthWalk = bossWalkImage:getWidth() / numWalkFrames
@@ -24,31 +24,52 @@ local frameHeightWalk = bossWalkImage:getHeight()
 local gridWalk = anim8.newGrid(frameWidthWalk, frameHeightWalk, bossWalkImage:getWidth(), bossWalkImage:getHeight())
 local walkAnim = anim8.newAnimation(gridWalk('1-' .. numWalkFrames, 1), 0.2)
 
--- Quake animation spritesheet for brute mode
+-- Boss idle animation
+local bossIdleImage = love.graphics.newImage("source/Sprites/Boss/Idle/boss_idle_def.png")
+local numIdleFrames = 2  -- assuming 2 frames horizontally; first frame is default
+local frameWidthIdle = bossIdleImage:getWidth() / numIdleFrames
+local frameHeightIdle = bossIdleImage:getHeight()
+local gridIdle = anim8.newGrid(frameWidthIdle, frameHeightIdle, bossIdleImage:getWidth(), bossIdleImage:getHeight())
+local idleAnim = anim8.newAnimation(gridIdle('1-' .. numIdleFrames, 1), 0.3)
+
+-- Boss melee attack animation (for switcher)
+local bossAttackImage = love.graphics.newImage("source/Sprites/Boss/Attack/boss_attck_def.png")
+local numAttackFrames = 3
+local frameWidthAttack = bossAttackImage:getWidth() / numAttackFrames
+local frameHeightAttack = bossAttackImage:getHeight()
+local gridAttack = anim8.newGrid(frameWidthAttack, frameHeightAttack, bossAttackImage:getWidth(), bossAttackImage:getHeight())
+local attackAnim = anim8.newAnimation(gridAttack('1-' .. numAttackFrames, 1), 0.1, "pauseAtEnd")
+
+-- Boss quake animation (for brute mode)
 local quakeImage = love.graphics.newImage("source/Sprites/Boss/Quake/boss_quake_def.png")
-local numQuakeFrames = 3
+local numQuakeFrames = 2   -- adjust as needed
 local frameWidthQuake = quakeImage:getWidth() / numQuakeFrames
 local frameHeightQuake = quakeImage:getHeight()
 local gridQuake = anim8.newGrid(frameWidthQuake, frameHeightQuake, quakeImage:getWidth(), quakeImage:getHeight())
 local quakeAnim = anim8.newAnimation(gridQuake('1-' .. numQuakeFrames, 1), 0.15)
 
--- Load sound effects
+--------------------------------------------------
+-- 2) LOAD SOUND EFFECTS
+--------------------------------------------------
 local howlSound = love.audio.newSource("source/SFX/bossHowl.wav", "static")
 local quakeSound = love.audio.newSource("source/SFX/quakeAttack.mp3", "static")
 
--- Define howling intervals (in seconds)
+-- Howling intervals (in seconds)
 local howlIntervalMin = 10
 local howlIntervalMax = 20
 
+--------------------------------------------------
+-- 3) BOSS CONSTRUCTOR
+--------------------------------------------------
 function Boss:new(world, x, y, settings)
     local instance = setmetatable({}, Boss)
     instance.world = world
-    -- Create a collider that starts 20 pixels lower and covers 80 pixels in height (removing the head)
+    -- Create collider: offset down 20px and height 80px to remove head collider
     instance.collider = world:newRectangleCollider(x, y + 20, 100, 80)
     instance.collider:setType("dynamic")
     instance.collider:setCollisionClass("Boss")
     
-    -- Fix rotation and increase mass/damping to prevent flying when player stands on the boss
+    -- Prevent boss from spinning and flying
     instance.collider:setFixedRotation(true)
     instance.collider:setMass(1000)
     instance.collider:setLinearDamping(5)
@@ -63,52 +84,70 @@ function Boss:new(world, x, y, settings)
     instance.JumpForce      = settings.JumpForce or 500
     instance.Type           = settings.Type or "switcher"
     
-    instance.attackTimer = 0
-    instance.state = "idle"
-    instance.bossPoison = false
+    instance.attackTimer    = 0
+    instance.state          = "idle"
+    instance.bossPoison     = false
+    instance.bullets        = {}
+    instance.rocks          = {}
     
-    instance.bullets = {}
-    instance.rocks = {}
-    
-    -- Boss facing factor: 1 for right, -1 for left
+    -- Boss facing: 1 for right, -1 for left
     instance.bossFlipX = 1
     
     -- Clone animations for this boss instance
-    instance.walkAnim = walkAnim:clone()
-    instance.quakeAnim = quakeAnim:clone()
+    instance.walkAnim   = walkAnim:clone()
+    instance.idleAnim   = idleAnim:clone()
+    instance.attackAnim = attackAnim:clone()
+    instance.quakeAnim  = quakeAnim:clone()
     
     -- Quake mode variables (for brute type)
-    instance.quakeActive = false       -- Whether currently in quake mode
-    instance.quakeTimer = 0            -- Time accumulator for quake mode
-    instance.quakeInterval = 5         -- Interval between quake modes
-    instance.quakeDuration = 2         -- Duration of quake mode
-    instance.quakeTimeLeft = 0         -- Time left in current quake mode
+    instance.quakeActive   = false
+    instance.quakeTimer    = 0
+    instance.quakeInterval = 5
+    instance.quakeDuration = 2
+    instance.quakeTimeLeft = 0
     
-    -- Set initial howling time for this boss instance
+    -- Howling: set next howl time
     instance.nextHowlTime = love.timer.getTime() + math.random(howlIntervalMin, howlIntervalMax)
+    
+    -- Melee attack state (for switcher)
+    instance.isAttacking    = false
+    instance.attackDuration = 0.3  -- about 3 frames * 0.1 each
+    instance.attackElapsed  = 0
     
     return instance
 end
 
+--------------------------------------------------
+-- 4) BOSS UPDATE
+--------------------------------------------------
 function Boss:update(dt, player)
     self.attackTimer = self.attackTimer + dt
 
-    -- Check if it's time to howl randomly
+    -- Random howling
     local currentTime = love.timer.getTime()
     if currentTime >= self.nextHowlTime then
-        love.audio.play(howlSound)
+        howlSound:play()
         self.nextHowlTime = currentTime + math.random(howlIntervalMin, howlIntervalMax)
     end
 
-    -- Update boss facing based on player's position
+    -- Update facing based on player's position
     local bx, by = self.collider:getPosition()
     local px, py = player:getX(), player:getY()
-    if px < bx then
-        self.bossFlipX = -1
-    else
-        self.bossFlipX = 1
+    self.bossFlipX = (px < bx) and -1 or 1
+
+    -- If in melee attack state, update its animation
+    if self.isAttacking then
+        self.attackElapsed = self.attackElapsed + dt
+        self.attackAnim:update(dt)
+        if self.attackElapsed >= self.attackDuration then
+            self.isAttacking = false
+            self.attackAnim:gotoFrame(1)
+            self.attackAnim:pause()
+            self.state = "idle"
+        end
     end
 
+    -- Type-specific logic
     if self.Type == "switcher" then
         self:handleSwitcher(dt, player)
     elseif self.Type == "brute" then
@@ -119,9 +158,9 @@ function Boss:update(dt, player)
     self:updateRocks(dt, player)
 end
 
----------------------------------
--- SWITCHER MODE LOGIC
----------------------------------
+--------------------------------------------------
+-- 5) SWITCHER MODE LOGIC
+--------------------------------------------------
 function Boss:handleSwitcher(dt, player)
     local bx, by = self.collider:getPosition()
     local px, py = player:getX(), player:getY()
@@ -129,20 +168,39 @@ function Boss:handleSwitcher(dt, player)
     local dy = py - by
     local distance = math.sqrt(dx * dx + dy * dy)
 
-    if distance < 200 then
+    if self.isAttacking then
+        self.state = "attack"
+        return
+    end
+
+    if distance < 40 then
+        self:startMeleeAttack(player)
+        self.state = "attack"
+    elseif distance < 200 then
         self:moveTowards(player, dt)
-        if distance < 40 then
-            self:attack(player)
-        end
+        self.walkAnim:update(dt)
+        self.state = "walk"
     else
         if self.attackTimer >= self.AttackInterval then
             self.attackTimer = 0
             self:spawnBullet(player)
+            self.state = "attack"
+        else
+            self.state = "idle"
+            self.idleAnim:update(dt)
         end
     end
+end
 
-    if not self.quakeActive and self.walkAnim then
-        self.walkAnim:update(dt)
+function Boss:startMeleeAttack(player)
+    self.isAttacking = true
+    self.attackElapsed = 0
+    self.attackAnim:gotoFrame(1)
+    self.attackAnim:resume()
+    if player.takeDamage then
+        player:takeDamage(self.AttackDamage)
+    else
+        playerHealth = playerHealth - self.AttackDamage
     end
 end
 
@@ -161,8 +219,13 @@ function Boss:spawnBullet(player)
         speed = 300,
         damage = 2 * self.Difficulty,
         dirX = dx,
-        dirY = dy
+        dirY = dy,
+        hit = false
     }
+    -- Assign the rock hit animation to this bullet; it will be used when it hits the player.
+    bullet.rockAnim = rockAnim:clone()
+    bullet.rockAnim:gotoFrame(1)
+    bullet.rockAnim:pause()
     table.insert(self.bullets, bullet)
     print("Switcher shoots a bullet for " .. bullet.damage .. " damage!")
 end
@@ -170,29 +233,38 @@ end
 function Boss:updateBullets(dt, player)
     for i = #self.bullets, 1, -1 do
         local b = self.bullets[i]
-        b.x = b.x + b.dirX * b.speed * dt
-        b.y = b.y + b.dirY * b.speed * dt
-        if b.x < 0 or b.x > love.graphics.getWidth() or b.y < 0 or b.y > love.graphics.getHeight() then
-            table.remove(self.bullets, i)
-        else
-            local px, py = player:getX(), player:getY()
-            -- Increased hit radius from 25 to 35
-            local d = math.sqrt((px - b.x)^2 + (py - b.y)^2)
-            if d < 35 then
-                if player.takeDamage then
-                    player:takeDamage(b.damage)
+        if not b.hit then
+            b.x = b.x + b.dirX * b.speed * dt
+            b.y = b.y + b.dirY * b.speed * dt
+            if b.x < 0 or b.x > love.graphics.getWidth() or b.y < 0 or b.y > love.graphics.getHeight() then
+                table.remove(self.bullets, i)
+            else
+                local px, py = player:getX(), player:getY()
+                local d = math.sqrt((px - b.x)^2 + (py - b.y)^2)
+                if d < 35 then
+                    if player.takeDamage then
+                        player:takeDamage(b.damage)
+                    else
+                        playerHealth = playerHealth - b.damage
+                    end
+                    b.hit = true
+                    b.rockAnim:gotoFrame(1)
+                    b.rockAnim:resume()
                 end
+            end
+        else
+            b.rockAnim:update(dt)
+            if b.rockAnim.position == #b.rockAnim.frames then
                 table.remove(self.bullets, i)
             end
         end
     end
 end
 
----------------------------------
--- BRUTE MODE LOGIC
----------------------------------
+--------------------------------------------------
+-- 6) BRUTE MODE LOGIC
+--------------------------------------------------
 function Boss:handleBrute(dt, player)
-    -- Quake mode logic: accumulate quakeTimer until interval is reached
     if not self.quakeActive then
         self.quakeTimer = self.quakeTimer + dt
         if self.quakeTimer >= self.quakeInterval then
@@ -202,16 +274,16 @@ function Boss:handleBrute(dt, player)
             print("Brute enters quake mode!")
             self.quakeAnim:gotoFrame(1)
             self.quakeAnim:resume()
-            love.audio.play(quakeSound)    -- Play quake sound
-            love.system.vibrate(0.1)         -- Trigger haptic feedback (if supported)
+            quakeSound:play()
+            love.system.vibrate(0.1)
         end
     end
 
     if self.quakeActive then
-        -- Update quake animation and spawn rocks at intervals
         self.quakeTimeLeft = self.quakeTimeLeft - dt
         self.quakeAnim:update(dt)
         self.attackTimer = self.attackTimer + dt
+        self.state = "attack"
         if self.attackTimer >= 1 then
             self.attackTimer = 0
             self:spawnRock()
@@ -225,6 +297,7 @@ function Boss:handleBrute(dt, player)
         if self.walkAnim then
             self.walkAnim:update(dt)
         end
+        self.state = "walk"
     end
 end
 
@@ -238,7 +311,7 @@ function Boss:spawnRock()
     }
     rock.rockAnim = rockAnim:clone()
     rock.rockAnim:gotoFrame(1)
-    rock.rockAnim:pause()  -- Start paused; will resume on hit
+    rock.rockAnim:pause()
     table.insert(self.rocks, rock)
 end
 
@@ -256,7 +329,6 @@ function Boss:updateRocks(dt, player)
                 table.remove(self.rocks, i)
             else
                 local px, py = player:getX(), player:getY()
-                -- Increased rock hit radius from 30 to 40
                 local d = math.sqrt((px - r.x)^2 + (py - r.y)^2)
                 if d < 40 then
                     if player.takeDamage then
@@ -273,9 +345,9 @@ function Boss:updateRocks(dt, player)
     end
 end
 
----------------------------------
--- COMMON FUNCTIONS
----------------------------------
+--------------------------------------------------
+-- 7) COMMON FUNCTIONS
+--------------------------------------------------
 function Boss:moveTowards(player, dt)
     local bx, by = self.collider:getPosition()
     local px, py = player:getX(), player:getY()
@@ -318,77 +390,92 @@ function Boss:takeDamage(amount)
     end
 end
 
+--------------------------------------------------
+-- 8) DRAW
+--------------------------------------------------
 function Boss:draw()
     local x, y = self.collider:getPosition()
-    -- Calculate boss scale based on difficulty:
-    -- Starting at 1.5, increasing by 0.5 per difficulty level, capped at 3
+    -- Boss scale: start at 1.5, increase by 0.5 per difficulty level, cap at 3
     local scale = math.min(1.5 + (self.Difficulty - 1) * 0.5, 3)
     local scaleX = scale * self.bossFlipX
     local scaleY = scale
 
-    -- Choose which animation to draw:
     local animToDraw, imageToDraw, fw, fh
+
     if self.Type == "brute" and self.quakeActive then
-        animToDraw = self.quakeAnim
+        animToDraw  = self.quakeAnim
         imageToDraw = quakeImage
-        fw, fh = frameWidthQuake, frameHeightQuake
-    else
-        animToDraw = self.walkAnim
+        fw, fh      = frameWidthQuake, frameHeightQuake
+    elseif self.isAttacking then
+        animToDraw  = self.attackAnim
+        imageToDraw = bossAttackImage
+        fw, fh      = frameWidthAttack, frameHeightAttack
+    elseif self.state == "walk" then
+        animToDraw  = self.walkAnim
         imageToDraw = bossWalkImage
-        fw, fh = frameWidthWalk, frameHeightWalk
+        fw, fh      = frameWidthWalk, frameHeightWalk
+    elseif self.state == "attack" then
+        animToDraw  = self.attackAnim
+        imageToDraw = bossAttackImage
+        fw, fh      = frameWidthAttack, frameHeightAttack
+    else
+        animToDraw  = self.idleAnim
+        imageToDraw = bossIdleImage
+        fw, fh      = frameWidthIdle, frameHeightIdle
     end
 
+    love.graphics.setColor(1,1,1,1)
     if animToDraw then
-        love.graphics.setColor(1, 1, 1, 1)
         local ox = fw / 2
         local oy = fh / 2
-        -- Adjust drawing position (subtract 10 pixels) for proper alignment with collider
         animToDraw:draw(imageToDraw, x, y - 10, 0, scaleX, scaleY, ox, oy)
     else
-        love.graphics.setColor(1, 1, 1, 1)
         love.graphics.rectangle("fill", x - 50, y - 50, 100, 100)
     end
 
     -- Draw bullets
     for _, b in ipairs(self.bullets) do
-        love.graphics.setColor(1, 1, 0)
-        love.graphics.circle("fill", b.x, b.y, 5)
+        if not b.hit then
+            local ox = rockSprite:getWidth() / 2
+            local oy = rockSprite:getHeight() / 2
+            love.graphics.draw(rockSprite, b.x, b.y, 0, 1, 1, ox, oy)
+        else
+            local ox = rockAnimImage:getWidth() / (numRockFrames * 2)
+            local oy = rockAnimImage:getHeight() / 2
+            b.rockAnim:draw(rockAnimImage, b.x, b.y, 0, 1, 1, ox, oy)
+        end
     end
 
-    -- Draw rocks: if a rock has hit, draw its hit animation; otherwise, draw the default rock sprite
+    -- Draw rocks
     for _, r in ipairs(self.rocks) do
         if r.hit then
-            love.graphics.setColor(1, 1, 1, 1)
             local ox = rockAnimImage:getWidth() / (numRockFrames * 2)
             local oy = rockAnimImage:getHeight() / 2
             r.rockAnim:draw(rockAnimImage, r.x, r.y, 0, 1, 1, ox, oy)
         else
-            love.graphics.setColor(1, 1, 1, 1)
             local ox = rockSprite:getWidth() / 2
             local oy = rockSprite:getHeight() / 2
             love.graphics.draw(rockSprite, r.x, r.y, 0, 1, 1, ox, oy)
         end
     end
 
-    -- Draw boss health bar at the top-center of the screen
+    -- Draw boss health bar at the top-center
     local screenWidth = love.graphics.getWidth()
     local healthBarWidth = 300
     local healthBarHeight = 25
-    local healthPercentage = math.max(self.Durability / self.MaxDurability, 0)
+    local healthPerc = math.max(self.Durability / self.MaxDurability, 0)
     
-    local rColor = math.min(2 * (1 - healthPercentage), 1)
-    local gColor = math.min(2 * healthPercentage, 1)
+    local rColor = math.min(2 * (1 - healthPerc), 1)
+    local gColor = math.min(2 * healthPerc, 1)
     
     local barX = (screenWidth / 2) - (healthBarWidth / 2)
     local barY = 17
     
-    love.graphics.setColor(0, 0, 0)
+    love.graphics.setColor(0,0,0)
     love.graphics.rectangle("fill", barX - 2, barY - 2, healthBarWidth + 4, healthBarHeight + 4)
-    
     love.graphics.setColor(rColor, gColor, 0)
-    love.graphics.rectangle("fill", barX, barY, healthBarWidth * healthPercentage, healthBarHeight)
-    
-    love.graphics.setColor(1, 1, 1)
+    love.graphics.rectangle("fill", barX, barY, healthBarWidth * healthPerc, healthBarHeight)
+    love.graphics.setColor(1,1,1)
     love.graphics.printf("BOSS", barX, barY, healthBarWidth, "center")
 end
 
