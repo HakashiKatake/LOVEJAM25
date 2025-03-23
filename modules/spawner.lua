@@ -37,7 +37,7 @@ function spawner.spawnBoss(world)
     local chosenType = bossTypes[math.random(#bossTypes)]
 
     -- Scale AttackDamage with difficulty + random
-    local randomAttackDamage = 10 * difficulty + math.random(0, 10)
+    local randomAttackDamage = 5 * difficulty + math.random(0, 10)
     -- Scale Durability with difficulty + random
     local randomDurability   = 200 * difficulty + math.random(0, 50)
 
@@ -48,7 +48,7 @@ function spawner.spawnBoss(world)
     boss = Boss:new(world, 500, 300, {
         Type           = chosenType,
         Difficulty     = difficulty,
-        AttackSpeed    = 0.2,
+        AttackSpeed    = 0.1,
         AttackDamage   = randomAttackDamage,
         AttackInterval = randomInterval,
         Durability     = randomDurability,
