@@ -3,10 +3,12 @@ Boss.__index = Boss
 
 local anim8 = require 'libraries.anim8'
 
--- Load the default rock sprite (if needed for non-hit rocks)
+-- Load sprites and animations
+
+-- Default rock sprite (for non-hit rocks)
 local rockSprite = love.graphics.newImage("source/Sprites/Boss/Attack/rock001.png")
 
--- Load the rock hit animation spritesheet (4 frames)
+-- Rock hit animation spritesheet (4 frames)
 local rockAnimImage = love.graphics.newImage("source/Sprites/Boss/Attack/rock_anim.png")
 local numRockFrames = 4
 local frameWidthRock = rockAnimImage:getWidth() / numRockFrames
@@ -14,7 +16,7 @@ local frameHeightRock = rockAnimImage:getHeight()
 local gridRockAnim = anim8.newGrid(frameWidthRock, frameHeightRock, rockAnimImage:getWidth(), rockAnimImage:getHeight())
 local rockAnim = anim8.newAnimation(gridRockAnim('1-' .. numRockFrames, 1), 0.1, "pauseAtEnd")
 
--- Load the boss walking spritesheet and create the walk animation.
+-- Boss walking spritesheet and walk animation
 local bossWalkImage = love.graphics.newImage("source/Sprites/Boss/Walk/boss_walk_def.png")
 local numWalkFrames = 4
 local frameWidthWalk = bossWalkImage:getWidth() / numWalkFrames
@@ -22,7 +24,7 @@ local frameHeightWalk = bossWalkImage:getHeight()
 local gridWalk = anim8.newGrid(frameWidthWalk, frameHeightWalk, bossWalkImage:getWidth(), bossWalkImage:getHeight())
 local walkAnim = anim8.newAnimation(gridWalk('1-' .. numWalkFrames, 1), 0.2)
 
--- Load the quake animation spritesheet for brute mode.
+-- Quake animation spritesheet for brute mode
 local quakeImage = love.graphics.newImage("source/Sprites/Boss/Quake/boss_quake_def.png")
 local numQuakeFrames = 3
 local frameWidthQuake = quakeImage:getWidth() / numQuakeFrames
@@ -30,15 +32,23 @@ local frameHeightQuake = quakeImage:getHeight()
 local gridQuake = anim8.newGrid(frameWidthQuake, frameHeightQuake, quakeImage:getWidth(), quakeImage:getHeight())
 local quakeAnim = anim8.newAnimation(gridQuake('1-' .. numQuakeFrames, 1), 0.15)
 
+-- Load sound effects
+local howlSound = love.audio.newSource("source/SFX/bossHowl.wav", "static")
+local quakeSound = love.audio.newSource("source/SFX/quakeAttack.mp3", "static")
+
+-- Define howling intervals (in seconds)
+local howlIntervalMin = 10
+local howlIntervalMax = 20
+
 function Boss:new(world, x, y, settings)
     local instance = setmetatable({}, Boss)
     instance.world = world
-    -- Adjust collider: start 20 pixels lower and only cover 80 pixels in height
+    -- Create a collider that starts 20 pixels lower and covers 80 pixels in height (removing the head)
     instance.collider = world:newRectangleCollider(x, y + 20, 100, 80)
     instance.collider:setType("dynamic")
     instance.collider:setCollisionClass("Boss")
     
-    -- Fix rotation so the boss doesn't spin due to collisions
+    -- Fix rotation and increase mass/damping to prevent flying when player stands on the boss
     instance.collider:setFixedRotation(true)
     instance.collider:setMass(1000)
     instance.collider:setLinearDamping(5)
@@ -60,25 +70,35 @@ function Boss:new(world, x, y, settings)
     instance.bullets = {}
     instance.rocks = {}
     
-    -- Boss facing factor: 1 for right, -1 for left
+    -- Boss facing: 1 for right, -1 for left
     instance.bossFlipX = 1
     
-    -- Clone animations for this instance
+    -- Clone animations for this boss instance
     instance.walkAnim = walkAnim:clone()
     instance.quakeAnim = quakeAnim:clone()
     
     -- Quake mode variables (for brute type)
-    instance.quakeActive = false       -- Whether currently in quake mode
-    instance.quakeTimer = 0            -- Time since last quake mode
-    instance.quakeInterval = 5         -- Interval (seconds) between quake modes
-    instance.quakeDuration = 2         -- How long quake mode lasts
-    instance.quakeTimeLeft = 0         -- Remaining quake mode time
-
+    instance.quakeActive = false       -- Whether in quake mode
+    instance.quakeTimer = 0            -- Time accumulator for quake mode
+    instance.quakeInterval = 5         -- Interval between quake modes
+    instance.quakeDuration = 2         -- Duration of quake mode
+    instance.quakeTimeLeft = 0         -- Time left in current quake mode
+    
+    -- Set initial howling time for this boss instance
+    instance.nextHowlTime = love.timer.getTime() + math.random(howlIntervalMin, howlIntervalMax)
+    
     return instance
 end
 
 function Boss:update(dt, player)
     self.attackTimer = self.attackTimer + dt
+
+    -- Check if it's time to howl randomly
+    local currentTime = love.timer.getTime()
+    if currentTime >= self.nextHowlTime then
+        love.audio.play(howlSound)
+        self.nextHowlTime = currentTime + math.random(howlIntervalMin, howlIntervalMax)
+    end
 
     -- Update boss facing based on player's position
     local bx, by = self.collider:getPosition()
@@ -156,7 +176,7 @@ function Boss:updateBullets(dt, player)
             table.remove(self.bullets, i)
         else
             local px, py = player:getX(), player:getY()
-            -- Increased hit radius from 25 to 35
+            -- Increase hit radius from 25 to 35
             local d = math.sqrt((px - b.x)^2 + (py - b.y)^2)
             if d < 35 then
                 if player.takeDamage then
@@ -184,6 +204,8 @@ function Boss:handleBrute(dt, player)
             print("Brute enters quake mode!")
             self.quakeAnim:gotoFrame(1)
             self.quakeAnim:resume()
+            love.audio.play(quakeSound)    -- Play quake sound
+            love.system.vibrate(0.1)         -- Trigger haptic feedback (if supported)
         end
     end
 
@@ -218,7 +240,7 @@ function Boss:spawnRock()
     }
     rock.rockAnim = rockAnim:clone()
     rock.rockAnim:gotoFrame(1)
-    rock.rockAnim:pause()  -- Start paused; will resume when hit
+    rock.rockAnim:pause()  -- Start paused; resume on hit
     table.insert(self.rocks, rock)
 end
 
@@ -236,7 +258,7 @@ function Boss:updateRocks(dt, player)
                 table.remove(self.rocks, i)
             else
                 local px, py = player:getX(), player:getY()
-                -- Increased rock hit radius from 30 to 40
+                -- Increase rock hit radius from 30 to 40
                 local d = math.sqrt((px - r.x)^2 + (py - r.y)^2)
                 if d < 40 then
                     if player.takeDamage then
@@ -301,7 +323,7 @@ end
 function Boss:draw()
     local x, y = self.collider:getPosition()
     -- Calculate boss scale based on difficulty:
-    -- Starting at 1.5 and increasing 0.5 per difficulty level, capped at 4
+    -- Starting at 1.5, increasing by 0.5 per difficulty level, capped at 4
     local scale = math.min(1.5 + (self.Difficulty - 1) * 0.5, 4)
     local scaleX = scale * self.bossFlipX
     local scaleY = scale
@@ -322,7 +344,7 @@ function Boss:draw()
         love.graphics.setColor(1, 1, 1, 1)
         local ox = fw / 2
         local oy = fh / 2
-        -- Adjust drawing position: subtract 10 pixels so that the sprite is aligned with the collider
+        -- Adjust drawing position (subtract 10 pixels) for proper alignment with collider
         animToDraw:draw(imageToDraw, x, y - 10, 0, scaleX, scaleY, ox, oy)
     else
         love.graphics.setColor(1, 1, 1, 1)
