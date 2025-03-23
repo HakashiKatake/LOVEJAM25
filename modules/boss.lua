@@ -3,7 +3,7 @@ Boss.__index = Boss
 
 local anim8 = require 'libraries.anim8'
 
--- Load the default rock sprite (for non-hit rocks)
+-- Load the default rock sprite (if needed for non-hit rocks)
 local rockSprite = love.graphics.newImage("source/Sprites/Boss/Attack/rock001.png")
 
 -- Load the rock hit animation spritesheet (4 frames)
@@ -33,9 +33,15 @@ local quakeAnim = anim8.newAnimation(gridQuake('1-' .. numQuakeFrames, 1), 0.15)
 function Boss:new(world, x, y, settings)
     local instance = setmetatable({}, Boss)
     instance.world = world
-    instance.collider = world:newRectangleCollider(x, y, 100, 100)
+    -- Adjust collider: start 20 pixels lower and only cover 80 pixels in height
+    instance.collider = world:newRectangleCollider(x, y + 20, 100, 80)
     instance.collider:setType("dynamic")
     instance.collider:setCollisionClass("Boss")
+    
+    -- Fix rotation so the boss doesn't spin due to collisions
+    instance.collider:setFixedRotation(true)
+    instance.collider:setMass(1000)
+    instance.collider:setLinearDamping(5)
     
     instance.Difficulty     = settings.Difficulty or 1
     instance.AttackSpeed    = settings.AttackSpeed or 0.2
@@ -150,10 +156,13 @@ function Boss:updateBullets(dt, player)
             table.remove(self.bullets, i)
         else
             local px, py = player:getX(), player:getY()
+            -- Increased hit radius from 25 to 35
             local d = math.sqrt((px - b.x)^2 + (py - b.y)^2)
-            if d < 25 then
+            if d < 35 then
                 if player.takeDamage then
                     player:takeDamage(b.damage)
+                else
+                    playerHealth = playerHealth - b.damage
                 end
                 table.remove(self.bullets, i)
             end
@@ -173,7 +182,6 @@ function Boss:handleBrute(dt, player)
             self.quakeTimeLeft = self.quakeDuration
             self.quakeTimer = 0
             print("Brute enters quake mode!")
-            -- Reset quakeAnim for this cycle
             self.quakeAnim:gotoFrame(1)
             self.quakeAnim:resume()
         end
@@ -201,13 +209,12 @@ function Boss:handleBrute(dt, player)
 end
 
 function Boss:spawnRock()
-    -- Create a rock with animation for hit effect
     local rock = {
         x = math.random(50, love.graphics.getWidth() - 50),
         y = -50,
         speedY = 200,
         damage = 10 * self.Difficulty,
-        hit = false  -- indicates if the rock has hit the player
+        hit = false
     }
     rock.rockAnim = rockAnim:clone()
     rock.rockAnim:gotoFrame(1)
@@ -229,10 +236,13 @@ function Boss:updateRocks(dt, player)
                 table.remove(self.rocks, i)
             else
                 local px, py = player:getX(), player:getY()
+                -- Increased rock hit radius from 30 to 40
                 local d = math.sqrt((px - r.x)^2 + (py - r.y)^2)
-                if d < 30 then
+                if d < 40 then
                     if player.takeDamage then
                         player:takeDamage(r.damage)
+                    else
+                        playerHealth = playerHealth - r.damage
                     end
                     r.hit = true
                     r.rockAnim:gotoFrame(1)
@@ -290,7 +300,9 @@ end
 
 function Boss:draw()
     local x, y = self.collider:getPosition()
-    local scale = 3  -- Increased scale for a bigger boss
+    -- Calculate boss scale based on difficulty:
+    -- Starting at 1.5 and increasing 0.5 per difficulty level, capped at 4
+    local scale = math.min(1.5 + (self.Difficulty - 1) * 0.5, 4)
     local scaleX = scale * self.bossFlipX
     local scaleY = scale
 
@@ -310,9 +322,9 @@ function Boss:draw()
         love.graphics.setColor(1, 1, 1, 1)
         local ox = fw / 2
         local oy = fh / 2
-        animToDraw:draw(imageToDraw, x, y, 0, scaleX, scaleY, ox, oy)
+        -- Adjust drawing position: subtract 10 pixels so that the sprite is aligned with the collider
+        animToDraw:draw(imageToDraw, x, y - 10, 0, scaleX, scaleY, ox, oy)
     else
-        -- Fallback (should not occur)
         love.graphics.setColor(1, 1, 1, 1)
         love.graphics.rectangle("fill", x - 50, y - 50, 100, 100)
     end
@@ -323,7 +335,7 @@ function Boss:draw()
         love.graphics.circle("fill", b.x, b.y, 5)
     end
 
-    -- Draw rocks: if rock.hit then draw its animation; else draw default rock sprite
+    -- Draw rocks: if a rock has hit, draw its hit animation; otherwise, draw the default rock sprite
     for _, r in ipairs(self.rocks) do
         if r.hit then
             love.graphics.setColor(1, 1, 1, 1)
@@ -338,7 +350,7 @@ function Boss:draw()
         end
     end
 
-    -- Draw boss health bar at top-center
+    -- Draw boss health bar at the top-center of the screen
     local screenWidth = love.graphics.getWidth()
     local healthBarWidth = 300
     local healthBarHeight = 25
