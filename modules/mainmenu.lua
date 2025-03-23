@@ -4,6 +4,7 @@ local lfs = love.filesystem
 local background = require 'modules.background'
 local credits = require 'modules.credits'
 local utility = require 'modules.utility'
+local fullscreen = require 'modules.fullscreen'
 
 background.doDrawBg = false
 
@@ -33,7 +34,7 @@ local cardCurrentDX, cardCurrentDY = 0, 0
 local wiggleTimer = 0
 local stars = {}
 
-local version = "v0.40-JamEdition"
+local version = "v0.51-JamEdition"
 
 -- Load main menu theme music as a streaming source and set to loop
 local mainTheme = love.audio.newSource("source/Music/maintheme.wav", "stream")
@@ -45,6 +46,7 @@ local lastHoveredButtonIndex = nil
 
 function mainmenu.load()
     love.window.setTitle("Knight Spade")
+    fullscreen.init()
 
     gameFont = love.graphics.newFont("source/fonts/Jersey10.ttf", 28)
     gameFontLarge = love.graphics.newFont("source/fonts/Jersey10.ttf", 72)
@@ -134,8 +136,12 @@ end
 
 function mainmenu.draw()
     effect(function()
+        fullscreen.apply()
+        
         background.draw({0.02, 0.02, 0.05}, 0, stars) -- Darker cosmic background
         drawMenu()
+
+        fullscreen.clear()
     end)
 end
 

@@ -8,6 +8,7 @@ local spawner = require 'modules.spawner'
 local utility = require 'modules.utility'
 local spritesheets = require 'modules.spritesheets'
 local cardbehaviour = require 'modules.cardbehaviour'
+local fullscreen = require 'modules.fullscreen'
 
 local game = {}
 
@@ -87,7 +88,7 @@ playerY = 300
 playerSpeed = 3
 
 -- Jumping
-local jumpForce = 2500
+jumpForce = 2500
 canJump = false
 local isJumping = false  -- For the jump animation
 
@@ -230,6 +231,8 @@ function game.load()
     world:addCollisionClass("Ground")
     world:addCollisionClass("PlayerTrigger")
     world:addCollisionClass("Boss")
+
+    fullscreen.init()
 
     gameFont = love.graphics.newFont("source/fonts/Jersey10.ttf", 25)
     love.graphics.setFont(gameFont)
@@ -515,6 +518,8 @@ function game.draw()
             love.graphics.translate(shakeX, shakeY)
         end
 
+        fullscreen.apply()
+
         background.draw(currentBgColor, gradientTime, stars)
         world:setQueryDebugDrawing(true)
 
@@ -588,6 +593,8 @@ function game.draw()
     end)
 
     love.graphics.setColor(1, 1, 1, 1)
+
+    fullscreen.clear()
 end
 
 ----------------------------------------------------------------
