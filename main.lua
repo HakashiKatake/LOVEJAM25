@@ -5,6 +5,7 @@ local credits = require 'modules.credits'
 currentState = "menu"  -- Initial state is the main menu
 
 function love.load()
+    
     if currentState == "menu" then
         mainmenu.load()
     elseif currentState == "game" then

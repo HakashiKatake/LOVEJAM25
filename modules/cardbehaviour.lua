@@ -94,10 +94,8 @@ function cardbehaviour.checkCardBehaviour(boughtCards, possibleCards, playerSpee
         worldGravity = 700
     elseif utility.tableContains(boughtCards, "Who's Newton?") then
         worldGravity = -800
-        jumpForce = -2500
     else
         worldGravity = 800
-        jumpForce = 2500
     end
 
     -- Return updated values

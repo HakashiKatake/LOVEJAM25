@@ -206,7 +206,7 @@ function game.resetGameState()
     cardsSoundPlayed = false
     lastHoveredButton = nil
 
-    difficulty = 1
+    difficulty = 1  -- Reset difficulty to 1 when returning to main menu
 
     world = wf.newWorld(0, worldGravity, true)
     background.doDrawBg = false
@@ -291,25 +291,6 @@ function game.update(dt)
     if background.update then background.update(dt) end
 
     if pausePopup or winPopup or losePopup then
-        -- Check hovered button for popups and play hover SFX
-        local hoveredBtn = nil
-        local btnTables = {}
-        if pausePopup then btnTables = pauseButtons
-        elseif winPopup then btnTables = winButtons
-        elseif losePopup then btnTables = loseButtons end
-        for key, btn in pairs(btnTables) do
-            local mx, my = love.mouse.getPosition()
-            if mx > btn.x and mx < btn.x + btn.w and my > btn.y and my < btn.y + btn.h then
-                hoveredBtn = btn
-                break
-            end
-        end
-        if hoveredBtn and hoveredBtn ~= lastHoveredButton then
-            love.audio.play(blipSelectSfx)
-            lastHoveredButton = hoveredBtn
-        elseif not hoveredBtn then
-            lastHoveredButton = nil
-        end
         return
     end
 
@@ -320,13 +301,27 @@ function game.update(dt)
     if isSpawned then
         playerTrigger:setPosition(player:getX(), player:getY())
 
+        -- Update collision detection for inverted gravity
         if ground and player then
             local gx, gy = ground:getPosition()
             local vx, vy = player:getLinearVelocity()
-            if math.abs(vy) < 1 and player:getY() >= gy - 60 then
-                canJump = true
-                if isJumping then
-                    isJumping = false
+
+            -- Check if player is "on the ground" based on gravity direction
+            if worldGravity > 0 then
+                -- Normal gravity (downward)
+                if math.abs(vy) < 1 and player:getY() >= gy - 60 then
+                    canJump = true
+                    if isJumping then
+                        isJumping = false
+                    end
+                end
+            else
+                -- Inverted gravity (upward)
+                if math.abs(vy) < 1 and player:getY() <= gy + 60 then
+                    canJump = true
+                    if isJumping then
+                        isJumping = false
+                    end
                 end
             end
         end
@@ -749,7 +744,7 @@ function game.mousepressed(x, y, button)
                         
                         Money = prevMoney + winPMoney
                         boughtCards = prevCards
-                        difficulty = difficulty + 1
+                        difficulty = difficulty + 1  -- Increment difficulty on win
                     elseif key == "mainmenu" then
                         game.resetGameState()
                         currentState = "menu"
@@ -763,6 +758,7 @@ function game.mousepressed(x, y, button)
             for key, btn in pairs(loseButtons) do
                 if x > btn.x and x < btn.x + btn.w and y > btn.y and y < btn.y + btn.h then
                     if key == "restart" then
+                        difficulty = difficulty + 1  -- Increment difficulty on loss
                         game.resetGameState()
                         losePopup = false
                     elseif key == "mainmenu" then
@@ -858,7 +854,9 @@ function game.keypressed(key)
         if canJump and not isJumping and not isAttacking then
             local vx, vy = player:getLinearVelocity()
             if math.abs(vy) < 0.1 then
-                player:applyLinearImpulse(0, -jumpForce)
+                -- Determine jump direction based on gravity
+                local jumpDirection = (worldGravity > 0) and -1 or 1
+                player:applyLinearImpulse(0, jumpDirection * jumpForce)
                 canJump = false
                 isJumping = true
                 spritesheets.currentAnim = spritesheets.jumpAnim
@@ -888,6 +886,8 @@ function game.keypressed(key)
         Poison = not Poison
     elseif key == '3' then
         game.fightWin()
+    elseif key == '4' then
+        difficulty = difficulty + 1
     end
 end
 

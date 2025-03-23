@@ -2,13 +2,23 @@ local spawner = {}
 local Boss = require("modules.boss")
 
 function spawner.spawnGround(world)
+    -- Adjust ground and roof positions based on gravity
+    local groundY, roofY
+    if worldGravity > 0 then
+        groundY = 550  -- Ground at the bottom for normal gravity
+        roofY = 0      -- Roof at the top
+    else
+        groundY = 0    -- Ground at the top for inverted gravity
+        roofY = 550    -- Roof at the bottom
+    end
+
     -- Ground collider
-    ground = world:newRectangleCollider(0, 550, 8000, 50)
+    ground = world:newRectangleCollider(0, groundY, 8000, 50)
     ground:setType('static')
     ground:setCollisionClass('Ground')
 
     -- Roof collider
-    roof = world:newRectangleCollider(0, 0, 8000, 10)
+    roof = world:newRectangleCollider(0, roofY, 8000, 50)
     roof:setType('static')
     roof:setCollisionClass('Ground')
 
@@ -37,7 +47,7 @@ function spawner.spawnBoss(world)
     local chosenType = bossTypes[math.random(#bossTypes)]
 
     -- Scale AttackDamage with difficulty + random
-    local randomAttackDamage = 10 * difficulty + math.random(0, 10)
+    local randomAttackDamage = 5 * difficulty + math.random(0, 10)
     -- Scale Durability with difficulty + random
     local randomDurability   = 200 * difficulty + math.random(0, 50)
 
@@ -48,7 +58,7 @@ function spawner.spawnBoss(world)
     boss = Boss:new(world, 500, 300, {
         Type           = chosenType,
         Difficulty     = difficulty,
-        AttackSpeed    = 0.2,
+        AttackSpeed    = 0.1,
         AttackDamage   = randomAttackDamage,
         AttackInterval = randomInterval,
         Durability     = randomDurability,
