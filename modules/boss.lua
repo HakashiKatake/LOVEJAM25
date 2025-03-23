@@ -70,7 +70,7 @@ function Boss:new(world, x, y, settings)
     instance.bullets = {}
     instance.rocks = {}
     
-    -- Boss facing: 1 for right, -1 for left
+    -- Boss facing factor: 1 for right, -1 for left
     instance.bossFlipX = 1
     
     -- Clone animations for this boss instance
@@ -78,7 +78,7 @@ function Boss:new(world, x, y, settings)
     instance.quakeAnim = quakeAnim:clone()
     
     -- Quake mode variables (for brute type)
-    instance.quakeActive = false       -- Whether in quake mode
+    instance.quakeActive = false       -- Whether currently in quake mode
     instance.quakeTimer = 0            -- Time accumulator for quake mode
     instance.quakeInterval = 5         -- Interval between quake modes
     instance.quakeDuration = 2         -- Duration of quake mode
@@ -176,13 +176,11 @@ function Boss:updateBullets(dt, player)
             table.remove(self.bullets, i)
         else
             local px, py = player:getX(), player:getY()
-            -- Increase hit radius from 25 to 35
+            -- Increased hit radius from 25 to 35
             local d = math.sqrt((px - b.x)^2 + (py - b.y)^2)
             if d < 35 then
                 if player.takeDamage then
                     player:takeDamage(b.damage)
-                else
-                    playerHealth = playerHealth - b.damage
                 end
                 table.remove(self.bullets, i)
             end
@@ -240,7 +238,7 @@ function Boss:spawnRock()
     }
     rock.rockAnim = rockAnim:clone()
     rock.rockAnim:gotoFrame(1)
-    rock.rockAnim:pause()  -- Start paused; resume on hit
+    rock.rockAnim:pause()  -- Start paused; will resume on hit
     table.insert(self.rocks, rock)
 end
 
@@ -258,7 +256,7 @@ function Boss:updateRocks(dt, player)
                 table.remove(self.rocks, i)
             else
                 local px, py = player:getX(), player:getY()
-                -- Increase rock hit radius from 30 to 40
+                -- Increased rock hit radius from 30 to 40
                 local d = math.sqrt((px - r.x)^2 + (py - r.y)^2)
                 if d < 40 then
                     if player.takeDamage then
@@ -323,8 +321,8 @@ end
 function Boss:draw()
     local x, y = self.collider:getPosition()
     -- Calculate boss scale based on difficulty:
-    -- Starting at 1.5, increasing by 0.5 per difficulty level, capped at 4
-    local scale = math.min(1.5 + (self.Difficulty - 1) * 0.5, 4)
+    -- Starting at 1.5, increasing by 0.5 per difficulty level, capped at 3
+    local scale = math.min(1.5 + (self.Difficulty - 1) * 0.5, 3)
     local scaleX = scale * self.bossFlipX
     local scaleY = scale
 
