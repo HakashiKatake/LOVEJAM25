@@ -97,6 +97,16 @@ attackDamage = 10
 attackSpeed = 1
 attackBonus = 0
 
+local dashSpeed = 7  -- Speed of the dash
+local dashDuration = 0.2  -- Duration of the dash in seconds
+local dashCooldown = 1.0  -- Cooldown between dashes in seconds
+local isDashing = false
+local dashTimer = 0
+local dashCooldownTimer = 0 
+local dashUsage = 0
+
+local canDash = false 
+
 playerFlipX = 2
 
 Poison = false
@@ -144,6 +154,10 @@ local prevPlayerHealth = playerHealth
 -- Reset the entire game state
 ----------------------------------------------------------------
 function game.resetGameState()
+    isDashing = false
+    dashTimer = 0
+    dashCooldownTimer = 0
+
     possibleCards = card.getPossibleCards()
     chosenCards = {}
     boughtCards = {}
@@ -266,6 +280,10 @@ end
 function game.update(dt)
     world:update(dt)
 
+    if canDash then
+        game.dash(dt)
+    end
+
     if background.updateAnimationFrame then background.updateAnimationFrame(dt) end
     if background.update then background.update(dt) end
 
@@ -354,19 +372,23 @@ function game.update(dt)
             end
         end
 
-        if love.keyboard.isDown('a') then
-            player:setX(playerX - playerSpeed)
-            playerX = playerX - playerSpeed
-            playerFlipX = -2
-            if Poison then
-                playerHealth = playerHealth - math.random(0.1, 1)
-            end
-        elseif love.keyboard.isDown('d') then
-            playerFlipX = 2
-            player:setX(playerX + playerSpeed)
-            playerX = playerX + playerSpeed
-            if Poison then
-                playerHealth = playerHealth - math.random(0.1, 1)
+        if isDashing then
+            -- Do nothing, let the dash function handle movement
+        else
+            if love.keyboard.isDown('a') then
+                player:setX(playerX - playerSpeed)
+                playerX = playerX - playerSpeed
+                playerFlipX = -2
+                if Poison then
+                    playerHealth = playerHealth - math.random(0.1, 1)
+                end
+            elseif love.keyboard.isDown('d') then
+                playerFlipX = 2
+                player:setX(playerX + playerSpeed)
+                playerX = playerX + playerSpeed
+                if Poison then
+                    playerHealth = playerHealth - math.random(0.1, 1)
+                end
             end
         end
 
@@ -821,6 +843,10 @@ function game.keypressed(key)
         if boss then boss:takeDamage(30) end
     elseif key == '=' then
         playerHealth = playerHealth - 10
+    elseif key == 'e' and canDash and not isDashing and dashCooldownTimer <= 0 then
+        dashUsage = dashUsage + 1
+        isDashing = true
+        dashTimer = dashDuration
     elseif key == 'space' then
         if canJump and not isJumping and not isAttacking then
             local vx, vy = player:getLinearVelocity()
@@ -877,6 +903,45 @@ function game.beginFight()
 
     mainTheme:stop()
     fightTheme:play() -- Start the fight music
+end
+
+----------------------------------------------------------------
+-- Dashing
+----------------------------------------------------------------
+
+function game.dash(dt)
+    if isDashing then
+        dashTimer = dashTimer - dt
+        if dashTimer <= 0 then
+            isDashing = false
+            dashCooldownTimer = dashCooldown
+        else
+            local dashDirection = playerFlipX > 0 and 1 or -1
+            player:setX(playerX + dashSpeed * dashDirection)
+            playerX = playerX + dashSpeed * dashDirection
+
+            -- Optional: Add screen shake for dash effect
+            screenShakeIntensity = 5
+        end
+    else
+        dashCooldownTimer = dashCooldownTimer - dt
+    end
+end
+
+function game.dash(dt)
+    if isDashing then
+        dashTimer = dashTimer - dt
+        if dashTimer <= 0 then
+            isDashing = false
+            dashCooldownTimer = dashCooldown
+        else
+            local dashDirection = playerFlipX > 0 and 1 or -1
+            player:setX(playerX + dashSpeed * dashDirection)
+            playerX = playerX + dashSpeed * dashDirection
+        end
+    else
+        dashCooldownTimer = dashCooldownTimer - dt
+    end
 end
 
 ----------------------------------------------------------------
