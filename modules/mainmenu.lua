@@ -16,9 +16,9 @@ local gameFont
 local gameFontLarge
 
 local buttonWidth, buttonHeight = 180, 60
-local buttonSpacing = 20 -- Reduced spacing between buttons
-local hoverColor = {0.2, 0.6, 1, 0.8} -- Cosmic blue hover color
-local normalColor = {0.1, 0.3, 0.6} -- Darker cosmic blue normal color
+local buttonSpacing = 20
+local hoverColor = {0.2, 0.6, 1, 0.8}
+local normalColor = {0.1, 0.3, 0.6}
 local clickedFlashDuration = 0.15
 local clickedTimer, clickedButton = 0, nil
 
@@ -29,19 +29,40 @@ local cardWidth, cardHeight = 120, 190
 local konamiSequence = {"up", "up", "down", "down", "left", "right", "left", "right", "b", "a"}
 local konamiIndex = 1
 
-local cardTargetDX, cardTargetDY = 0, 0
-local cardCurrentDX, cardCurrentDY = 0, 0
 local wiggleTimer = 0
 local stars = {}
 
-local version = "v0.56-JamEdition"
+local version = "v0.57-FirstEdition"
 
--- Load main menu theme music as a streaming source and set to loop
-local mainTheme = love.audio.newSource("source/Music/maintheme.wav", "stream")
+-- Enhanced Now Playing effects
+local nowPlayingText = "Now Playing: Shuffle the Deck by MemoDev"
+local nowPlayingTimers = {}
+local nowPlayingOffsets = {}
+local dancePhase = 0
+local danceSpeed = 0
+local isDancing = false
+local danceTimer = 0
+local danceDuration = 0
+local flashTimer = 0
+local flashDuration = 1.2
+local flashIntensity = 0
+local flashColor = {1, 1, 0.7}
+
+-- Title animation variables
+local titleScale = 1
+local titleScaleDirection = 1
+local titleScaleSpeed = 0.2
+local titleRotation = 0
+local titleRotationSpeed = 0.5
+local titleYOffset = 0
+local titleBobSpeed = .05
+local titleBobAmount = 3
+
+local mainTheme = love.audio.newSource("source/Music/maintheme.mp3", "stream")
 mainTheme:setLooping(true)
 
--- Load the button hover SFX (blipSelect)
 local buttonSelectSfx = love.audio.newSource("source/SFX/blipSelect.wav", "static")
+local buttonClickSfx = love.audio.newSource("source/SFX/click.wav", "static")
 local lastHoveredButtonIndex = nil
 
 function mainmenu.load()
@@ -65,11 +86,11 @@ function mainmenu.load()
 
     local screenW = love.graphics.getWidth()
     local screenH = love.graphics.getHeight()
-    local startX = 50 -- Buttons on the left side
-    local startY = 300 -- Buttons lowered
+    local startX = 50
+    local startY = 300
 
     local menuItems = {"Play", "Credits", "Quit"}
-    local buttonWidths = {220, 180, 140} -- Different widths for Play, Credits, Quit
+    local buttonWidths = {220, 180, 140}
     for i, text in ipairs(menuItems) do
         table.insert(buttons, {
             text = text,
@@ -94,12 +115,69 @@ function mainmenu.load()
         table.insert(stars, {x = love.math.random(0, screenW), y = love.math.random(0, screenH), speed = love.math.random(5, 20) / 10})
     end
 
-    -- Start main menu music
+    -- Initialize Now Playing effects
+    for i = 1, #nowPlayingText do
+        nowPlayingTimers[i] = love.math.random() * 2 * math.pi
+        nowPlayingOffsets[i] = 0
+    end
+    
+    danceTimer = love.math.random(2, 5)
+    danceDuration = love.math.random(3, 6)
+
     mainTheme:play()
 end
 
 function mainmenu.update(dt)
     background.update(dt)
+    
+    -- Update title animation
+    titleScale = titleScale + titleScaleDirection * titleScaleSpeed * dt
+    if titleScale > 1.05 or titleScale < 0.95 then
+        titleScaleDirection = titleScaleDirection * -1
+    end
+    
+    titleRotation = titleRotation + titleRotationSpeed * dt
+    if titleRotation > 0.05 or titleRotation < -0.05 then
+        titleRotationSpeed = titleRotationSpeed * -1
+    end
+    
+    titleYOffset = math.sin(love.timer.getTime() * titleBobSpeed) * titleBobAmount
+
+    -- Handle dance sessions
+    if isDancing then
+        dancePhase = dancePhase + dt * danceSpeed
+        danceTimer = danceTimer - dt
+        
+        if danceTimer <= 0 then
+            isDancing = false
+            danceTimer = love.math.random(8, 15)
+        end
+    else
+        danceTimer = danceTimer - dt
+        if danceTimer <= 0 then
+            isDancing = false
+            danceSpeed = love.math.random(3, 6)
+            danceDuration = love.math.random(4, 8)
+            danceTimer = danceDuration
+            dancePhase = 0
+        end
+    end
+
+    -- Update character dancing
+    for i = 1, #nowPlayingText do
+        nowPlayingTimers[i] = nowPlayingTimers[i] + dt * (isDancing and danceSpeed or 1)
+        local wave = math.sin(nowPlayingTimers[i] + i * 0.2)
+        nowPlayingOffsets[i] = wave * (isDancing and 8 or 3)
+    end
+
+    -- Update flash effect
+    if flashTimer > 0 then
+        flashTimer = flashTimer - dt
+        flashIntensity = math.sin((1 - (flashTimer / flashDuration)) * math.pi)
+    elseif love.math.random() < (isDancing and 0.02 or 0.005) then
+        flashTimer = flashDuration
+        flashIntensity = 0
+    end
 
     if clickedButton then
         clickedTimer = clickedTimer - dt
@@ -110,7 +188,7 @@ function mainmenu.update(dt)
 
     wiggleTimer = wiggleTimer + dt * 2
 
-    -- Update stars for background
+    -- Update stars
     for _, star in ipairs(stars) do
         star.y = star.y + star.speed
         if star.y > love.graphics.getHeight() then
@@ -119,7 +197,7 @@ function mainmenu.update(dt)
         end
     end
 
-    -- Check for hover over buttons and play SFX if needed
+    -- Check button hover
     local mx, my = love.mouse.getPosition()
     local hoveredIndex = nil
     for i, btn in ipairs(buttons) do
@@ -138,7 +216,7 @@ function mainmenu.draw()
     effect(function()
         fullscreen.apply()
         
-        background.draw({0.02, 0.02, 0.05}, 0, stars) -- Darker cosmic background
+        background.draw({0.02, 0.02, 0.05}, 0, stars)
         drawMenu()
 
         fullscreen.clear()
@@ -147,12 +225,18 @@ end
 
 function drawMenu()
     local banner = love.graphics.newImage("source/Sprites/banner.png")
-    local bannerScale = 0.5 -- Adjust scale as needed
-    local bannerX = (love.graphics.getWidth() / 2) - (banner:getWidth() * bannerScale / 2) -- Centered at the top
-    local bannerY = 50 -- Banner at the top
+    local bannerScale = 0.5
+    local bannerX = (love.graphics.getWidth() / 2) - (banner:getWidth() * bannerScale / 2)
+    local bannerY = 50 + titleYOffset
 
-    love.graphics.setColor(1, 1, 1, 0.9) -- Adjusted transparency for the banner
-    love.graphics.draw(banner, bannerX, bannerY, 0, bannerScale, bannerScale)
+    -- Draw animated title
+    love.graphics.push()
+    love.graphics.translate(bannerX + banner:getWidth() * bannerScale / 2, bannerY + banner:getHeight() * bannerScale / 2)
+    love.graphics.rotate(titleRotation)
+    love.graphics.scale(titleScale, titleScale)
+    love.graphics.setColor(1, 1, 1, 0.9)
+    love.graphics.draw(banner, -banner:getWidth() * bannerScale / 2, -banner:getHeight() * bannerScale / 2, 0, bannerScale, bannerScale)
+    love.graphics.pop()
 
     love.graphics.setFont(gameFont)
     local mx, my = love.mouse.getPosition()
@@ -162,16 +246,16 @@ function drawMenu()
         local isClicked = (clickedButton == button)
         local color = normalColor
         local scale = 1
+        local outlineWidth = 0
 
-        -- Hover feedback: Slightly scale up and change color
         if isHovered then
             scale = 1.05
             color = hoverColor
+            outlineWidth = 3
         end
 
-        -- Click feedback: Flash white briefly
         if isClicked then
-            color = {1, 1, 1} -- White flash
+            color = {1, 1, 1}
         end
 
         love.graphics.setColor(0, 0, 0, 0.4)
@@ -179,15 +263,65 @@ function drawMenu()
 
         love.graphics.setColor(color)
         love.graphics.rectangle("fill", button.x, button.y, button.w, button.h, 10, 10)
+        
+        -- Draw outline if hovered
+        if outlineWidth > 0 then
+            love.graphics.setLineWidth(outlineWidth)
+            love.graphics.setColor(1, 1, 1, 0.8)
+            love.graphics.rectangle("line", button.x, button.y, button.w, button.h, 10, 10)
+            love.graphics.setLineWidth(1)
+        end
 
         love.graphics.setColor(1, 1, 1)
         love.graphics.printf(button.text, button.x, button.y + (button.h / 4), button.w, "center")
     end
 
-    drawCard() -- Draw the card in its static position
+    drawCard()
 
+    -- Draw version text
     love.graphics.setColor(1, 1, 1, 0.7)
-    love.graphics.printf(version, love.graphics.getWidth() - 200, love.graphics.getHeight() - 40, 200, "right")
+    love.graphics.printf(version, love.graphics.getWidth() - 200, love.graphics.getHeight() - 30, 200, "right")
+    
+    -- Draw Now Playing text with full width calculation
+    local textWidth = gameFont:getWidth(nowPlayingText)
+    local textX = love.graphics.getWidth() - textWidth - 170
+    local textY = love.graphics.getHeight() - 580
+    
+    love.graphics.setFont(gameFont)
+    for i = 1, #nowPlayingText do
+        local char = nowPlayingText:sub(i, i)
+        local charWidth = gameFont:getWidth(char)
+        
+        -- Apply flash effect
+        if flashTimer > 0 then
+            local flashAmount = flashIntensity * 0.8
+            love.graphics.setColor(
+                flashColor[1] * flashAmount + (1 - flashAmount),
+                flashColor[2] * flashAmount + (1 - flashAmount),
+                flashColor[3] * flashAmount + (1 - flashAmount),
+                0.8
+            )
+        else
+            local danceIntensity = isDancing and 0.8 or 0.6
+            love.graphics.setColor(1, 1, 1, danceIntensity)
+        end
+        
+        -- Enhanced effects during dance
+        if isDancing then
+            local scale = 1 + math.sin(nowPlayingTimers[i] * 0.5) * 0.1
+            local rotation = math.sin(nowPlayingTimers[i] * 0.7) * 0.1
+            love.graphics.push()
+            love.graphics.translate(textX + charWidth/2, textY + nowPlayingOffsets[i])
+            love.graphics.rotate(rotation)
+            love.graphics.scale(scale, scale)
+            love.graphics.print(char, -charWidth/2, -gameFont:getHeight()/2)
+            love.graphics.pop()
+        else
+            love.graphics.print(char, textX, textY + nowPlayingOffsets[i])
+        end
+        
+        textX = textX + charWidth
+    end
 end
 
 function drawCard()
@@ -214,17 +348,19 @@ function mainmenu.mousepressed(x, y, button)
             if x > btn.x and x < btn.x + btn.w and y > btn.y and y < btn.y + btn.h then
                 clickedButton = btn
                 clickedTimer = clickedFlashDuration
+                buttonClickSfx:play()
 
                 if btn.action == "play" then
                     currentState = "game"
                     game.load()
-                    mainTheme:stop() -- Stop main menu music when starting game
+                    setModifier()
+                    mainTheme:stop()
                 elseif btn.action == "quit" then
                     love.event.quit()
                 elseif btn.action == "credits" then
                     currentState = "credits"
                     credits.load()
-                    mainTheme:stop() -- Stop main menu music
+                    mainTheme:stop()
                 end
             end
         end

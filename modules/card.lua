@@ -2,6 +2,10 @@ local card = {}
 
 function card.getPossibleCards()
     return {
+        -- Update >0.55 | Dev Testing
+            -- {Name = "Shield Wall", Description = "Take 50% less damage for 10 seconds", Price = 10, Sprite = love.graphics.newImage("source/Sprites/Cards/shield_wall.png")},
+            --{Name = "Phase Shift", Description = "Temporary invincibility (3-5 seconds)", Price = 9, Sprite = love.graphics.newImage("source/Sprites/Cards/phase_shift.png")},
+        -- Update 0.56 | Game Jam Release
         {Name = "Antidote", Description = "Poison Immunity", Price = 5, Sprite = love.graphics.newImage("source/Sprites/Cards/antidote.png")},
         {Name = "Resilience", Description = "2/1 Chance to be immune to next potion", Price = 4, Sprite = love.graphics.newImage("source/Sprites/Cards/resilience.png")},
         {Name = "Strength", Description = "Boost to Attack Damage", Price = 6, Sprite = love.graphics.newImage("source/Sprites/Cards/strength.png")},
@@ -12,18 +16,22 @@ function card.getPossibleCards()
         {Name = "UNO Reverse", Description = "Apply current effect to the boss (lasts 10-20 seconds)", Price = 6, Sprite = love.graphics.newImage("source/Sprites/Cards/uno_reverse.png")},
         {Name = "Thorns", Description = "Reflects a portion of damage taken", Price = 8, Sprite = love.graphics.newImage("source/Sprites/Cards/thorns.png")},
         {Name = "Vampiric Strike", Description = "Steal health equal to 15% of in return of lower attack damage", Price = 8, Sprite = love.graphics.newImage("source/Sprites/Cards/vampiric_strike.png")},
-        --{Name = "Phase Shift", Description = "Temporary invincibility (3-5 seconds)", Price = 9, Sprite = love.graphics.newImage("source/Sprites/Cards/phase_shift.png")},
         {Name = "Second Wind", Description = "Revive with 50% health after dying, lose all the cards you have", Price = 16, Sprite = love.graphics.newImage("source/Sprites/Cards/second_wind.png")},
         {Name = "Lucky Draw", Description = "Randomly gain one positive effect", Price = 5, Sprite = love.graphics.newImage("source/Sprites/Cards/lucky_draw.png")},
         {Name = "Haste", Description = "Gain the ability of Dashing", Price = 9, Sprite = love.graphics.newImage("source/Sprites/Cards/haste.png")},
         {Name = "Time Warp", Description = "Get back 20 Health if Boss Health > 50 and Player Health < 50", Price = 12, Sprite = love.graphics.newImage("source/Sprites/Cards/time_warp.png")},
-        -- {Name = "Shield Wall", Description = "Take 50% less damage for 10 seconds", Price = 10, Sprite = love.graphics.newImage("source/Sprites/Cards/shield_wall.png")},
-        -- {Name = "Berserk", Description = "Double attack damage but take 25% more damage", Price = 8, Sprite = love.graphics.newImage("source/Sprites/Cards/berserk.png")},
+        {Name = "Centipide Curse", Description = "2x Money but the boss is 1.5x stronger", Price = 8, Sprite = love.graphics.newImage("source/Sprites/Cards/berserk.png")},
         {Name = "Mushroom", Description = "50% chance poisoning, 50% get more health", Price = 5, Sprite = love.graphics.newImage("source/Sprites/Cards/mushroom.png")},
         {Name = "Fly like a Bunny", Description = "Boosted Jump Height", Price = 6, Sprite = love.graphics.newImage("source/Sprites/Cards/fly_like_a_bunny.png")},
         {Name = "GL1T5H", Description = "???", Price = 20, Sprite = love.graphics.newImage("source/Sprites/Cards/glitch.png")}, 
         {Name = "BUY BUY BUY", Description = "Get 2 more additional cards in the shop", Price = 15, Sprite = love.graphics.newImage("source/Sprites/Cards/bbb.png")},
-        {Name = "Sheild", Description = "+20 Health", Price = 10, Sprite = love.graphics.newImage("source/Sprites/Cards/shield.png")}
+        {Name = "Sheild", Description = "+20 Health", Price = 10, Sprite = love.graphics.newImage("source/Sprites/Cards/shield.png")},
+        -- Updat 0.57 | First Edition
+        {Name = "INFINITE YIELD", Description = "Half the boss health", Price = 20, Sprite = love.graphics.newImage("source/Sprites/Cards/infyield.png")},
+        {Name = "Gambling", Description = "Reroll The Shop with -1 Cards (Single Time Use)", Price = 5, Sprite = love.graphics.newImage("source/Sprites/Cards/reroll.png")},
+        {Name = "EMPEROR's Order", Description = "1/2 Chance to boost strength by 30%", Price = 8, Sprite = love.graphics.newImage("source/Sprites/Cards/emperor.png")},
+        {Name = "Cuteness Attack", Description = "Boss is weaker", Price = 7, Sprite = love.graphics.newImage("source/Sprites/Cards/bella.png")},
+        {Name = "H4CK", Description = "10/1 Chance to kill boss on beginning (Single Time Use)", Price = 8, Sprite = love.graphics.newImage("source/Sprites/Cards/binary.png")}
     }
 end
 

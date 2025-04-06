@@ -241,7 +241,7 @@ function Boss:spawnBullet(player)
         x = bx,
         y = by,
         speed = 300,
-        damage = 2 * self.Difficulty,
+        damage = 2 * (self.Difficulty / 2),
         dirX = dx,
         dirY = dy,
         hit = false

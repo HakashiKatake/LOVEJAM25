@@ -17,7 +17,7 @@ local fightTheme = love.audio.newSource("source/Music/fight-theme.wav", "stream"
 fightTheme:setLooping(true)
 
 -- Load main menu music as a streaming source and set to loop
-local mainTheme = love.audio.newSource("source/Music/maintheme.wav", "stream")
+local mainTheme = love.audio.newSource("source/Music/maintheme.mp3", "stream")
 mainTheme:setLooping(true)
 
 -- SFX for card appearance and hover
@@ -121,6 +121,24 @@ worldGravity = 800
 local maxBoughtCards = 5
 
 math.randomseed(os.time())
+
+function setModifier(source)
+    local modifierRandomizer = math.random(1, 5)
+
+    if modifierRandomizer == 1 then
+        Poison = true
+        TwoFaced = false
+        print("Poison mod active!")
+    elseif modifierRandomizer == 2 then
+        TwoFaced = true
+        Poison = false
+        print("TwoFaced mod active!")
+    else
+        Poison = false
+        TwoFaced = false
+        print("NO MODS")
+    end
+end
 
 -- Attack system
 local attackCooldown = 0.2
@@ -227,6 +245,7 @@ end
 ----------------------------------------------------------------
 function game.load()
     love.window.setTitle("Knight Spade")
+
     world = wf.newWorld(0, worldGravity, true)
     world:addCollisionClass("Ground")
     world:addCollisionClass("PlayerTrigger")
@@ -285,6 +304,11 @@ function game.update(dt)
 
     if canDash then
         game.dash(dt)
+    end
+
+    if utility.tableContains(boughtCards, "Gambling") then
+        card.drawCards(amountCards, possibleCards, chosenCards, cardAnimations, cardY)
+        utility.tableRemove(boughtCards, "Gambling")
     end
 
     if background.updateAnimationFrame then background.updateAnimationFrame(dt) end
@@ -483,6 +507,25 @@ function game.update(dt)
             chosenCards = {}
             cardAnimations = {}
             game.beginFight()
+
+            if utility.tableContains(boughtCards, "INFINITE YIELD") then
+                boss.Durability = boss.Durability / 2
+            end
+
+            if utility.tableContains(boughtCards, "EMPEROR's Order") then
+                if utility.tableContains(boughtCards, "Strength") or utility.tableContains(boughtCards, "RGB") then
+                    attackDamage = 32
+                else
+                    attackDamage = 22
+                end
+            else
+                if utility.tableContains(boughtCards, "Strength") or utility.tableContains(boughtCards, "RGB") then
+                    attackDamage = 25
+                else
+                    attackDamage = 15
+                end
+            end
+
             background.doDrawBg = true
             background.drawEffects = false
             mainTheme:stop()
@@ -511,6 +554,14 @@ function game.draw()
             local shakeX = love.math.random(-screenShakeIntensity, screenShakeIntensity)
             local shakeY = love.math.random(-screenShakeIntensity, screenShakeIntensity)
             love.graphics.translate(shakeX, shakeY)
+        end
+
+        if Poison then
+            love.graphics.printf("Smells Weird...", 2, 255, 800, "center")
+        end
+
+        if TwoFaced then
+            love.graphics.printf("I feel dizzy...", 2, 255, 800, "center")
         end
 
         fullscreen.apply()
@@ -577,6 +628,7 @@ function game.draw()
 
         if winPopup then
             game.drawWinPopup()
+            screenShakeIntensity = 0
         elseif losePopup then
             game.drawLosePopup()
         elseif pausePopup then
@@ -846,6 +898,8 @@ function game.keypressed(key)
         if boss then boss:takeDamage(30) end
     elseif key == '=' then
         playerHealth = playerHealth - 10
+    elseif key == 'x' then
+        playerHealth = playerHealth + 10
     elseif key == 'e' and canDash and not isDashing and dashCooldownTimer <= 0 then
         dashUsage = dashUsage + 1
         isDashing = true

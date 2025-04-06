@@ -16,6 +16,10 @@ function cardbehaviour.checkCardBehaviour(boughtCards, possibleCards, playerSpee
         playerSpeed = 3
     end
 
+    if utility.tableContains(boughtCards, "H4CK") then
+        utility.tableRemove(boughtCards, "H4CK") 
+    end
+
     if utility.tableContains(boughtCards, "Mushroom") then
         if math.random(1, 10) > 6 then
             Poison = true
@@ -45,9 +49,9 @@ function cardbehaviour.checkCardBehaviour(boughtCards, possibleCards, playerSpee
     end
 
     if utility.tableContains(boughtCards, "Strength") or utility.tableContains(boughtCards, "RGB") then
-        attackDamage = 15
+        attackDamage = 25
     else
-        attackDamage = 20
+        attackDamage = 15
     end
 
     if utility.tableContains(boughtCards, "Quickhand") or utility.tableContains(boughtCards, "RGB") then
